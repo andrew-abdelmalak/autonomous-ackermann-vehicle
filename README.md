@@ -40,6 +40,20 @@ installed and operational on two target platforms:
 | Ackermann vehicle in Gazebo Harmonic | ✓ Imported and running |
 | Publisher/subscriber node (/cmd_vel ↔ /odom) | ✓ Implemented |
 
+## Visual Highlights
+
+<p align="center">
+  <img src="assets/figures/m1_hardware_ros2_doctor.png" alt="ROS 2 doctor verification on Raspberry Pi 4" width="360"/>
+  &nbsp;&nbsp;
+  <img src="assets/figures/m1_hardware_validation_node.png" alt="Hardware validation node output on Raspberry Pi 4" width="360"/>
+</p>
+<p align="center"><em>Figure 1. Left: <code>ros2 doctor</code> verification on the Raspberry Pi 4 showing a valid ROS 2 Jazzy installation. Right: 1 Hz hardware validation node output on the target platform.</em></p>
+
+<p align="center">
+  <img src="assets/figures/m1_simulation_validation_node.png" alt="Simulation validation node output" width="760"/>
+</p>
+<p align="center"><em>Figure 2. Simulation-side validation node output used to confirm the ROS 2 Jazzy software stack before vehicle-level integration in Gazebo Harmonic.</em></p>
+
 ---
 
 ## Repository Structure
