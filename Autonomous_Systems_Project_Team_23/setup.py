@@ -42,6 +42,15 @@ setup(
             'ms2_teleop_team_23 = '
             'Autonomous_Systems_Project_Team_23.'
             'Autonomous_Systems_MS_2_Teleop_Team_23:main',
+            'ms3_clr_alg_1_speed_team_23 = '
+            'Autonomous_Systems_Project_Team_23.'
+            'Autonomous_Systems_MS_3_CLR_Alg_1_Speed_Team_23:main',
+            'ms3_clr_alg_2_lateral_team_23 = '
+            'Autonomous_Systems_Project_Team_23.'
+            'Autonomous_Systems_MS_3_CLR_Alg_2_Lateral_Team_23:main',
+            'joy_teleop_team_23 = '
+            'Autonomous_Systems_Project_Team_23.'
+            'Autonomous_Systems_MS_3_Joy_Teleop_Team_23:main',
         ],
     },
 )

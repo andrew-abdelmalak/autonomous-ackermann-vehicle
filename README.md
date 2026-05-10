@@ -2,12 +2,14 @@
 
 ROS 2 Jazzy and Gazebo Harmonic deliverables for the GUC MCTR1002 Autonomous
 Systems project. The repository now documents the cumulative project state
-through Milestone 2:
+through Milestone 3:
 
 - Milestone 1: ROS 2 Jazzy validation on Raspberry Pi 4 hardware and Gazebo
   simulation platforms.
 - Milestone 2: Gazebo empty-world Ackermann driving, open-loop response (OLR),
   keyboard teleoperation, and Arduino actuator testing.
+- Milestone 3: Closed-loop speed + lateral control, tuned joystick teleop, and
+  calibrated Arduino drive/steering controller.
 
 - **Course**: MCTR1002 - Autonomous Systems
 - **Team**: 23
@@ -37,6 +39,8 @@ through Milestone 2:
 | Milestone 2 simulation | OLR driving node with parameterized speed and steering | Done |
 | Milestone 2 simulation | Keyboard teleoperation node with state logging | Done |
 | Milestone 2 hardware | Arduino motor/servo actuator controller with encoder feedback and PID speed loop | Done |
+| Milestone 3 simulation | Closed-loop speed + lateral controller nodes | Done |
+| Milestone 3 hardware | Tuned Arduino controller with calibrated encoder + steering | Done |
 
 ## Visual Evidence
 
@@ -70,6 +74,7 @@ Autonomous_Systems_Project_Team_23/
   setup.py
   launch/
     Autonomous_Systems_MS_2_Team_23.launch.py
+    Autonomous_Systems_MS_3_Team_23.launch.py
   models/
     prius_team23/
       model.config
@@ -81,6 +86,9 @@ Autonomous_Systems_Project_Team_23/
     Vehicle_Pub_Sub_Node_Team_23.py
     Autonomous_Systems_MS_2_OLR_Team_23.py
     Autonomous_Systems_MS_2_Teleop_Team_23.py
+    Autonomous_Systems_MS_3_CLR_Alg_1_Speed_Team_23.py
+    Autonomous_Systems_MS_3_CLR_Alg_2_Lateral_Team_23.py
+    Autonomous_Systems_MS_3_Joy_Teleop_Team_23.py
 hardware/
   Autonomous_Systems_Project_Hardware_OLR_Actuators_Team_23/
     Autonomous_Systems_Project_Hardware_OLR_Actuators_Team_23.ino
@@ -184,9 +192,32 @@ Controls:
 | `desired_steering` | `0.0` | OLR steering angle command in rad |
 | `use_rqt_graph` | `true` | Start `rqt_graph` |
 | `serial_forwarding_enabled` | `false` | Forward teleop speed/steering commands to Arduino |
-| `serial_port` | `/dev/ttyACM0` | Arduino serial port |
+| `serial_port` | `/dev/ttyUSB0` | Arduino serial port |
 | `serial_baudrate` | `115200` | Arduino serial baud rate |
 | `teleop_terminal_prefix` | `gnome-terminal --` | Terminal wrapper for keyboard input |
+
+## Milestone 3 Simulation
+
+Launch closed-loop speed and lateral control:
+
+```bash
+ros2 launch Autonomous_Systems_Project_Team_23 Autonomous_Systems_MS_3_Team_23.launch.py \
+  desired_speed:=0.5 \
+  desired_lane:=0.0 \
+  desired_heading:=0.0
+```
+
+The MS3 launch starts Gazebo, spawns the vehicle, bridges clock/odometry/joints,
+then runs the speed controller and lateral controller nodes.
+
+## MS3 Joy Teleop (Hardware)
+
+Run the joystick teleop with Arduino serial forwarding:
+
+```bash
+ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \
+  --ros-args -p serial_port:=/dev/ttyUSB0
+```
 
 ## ROS 2 Interfaces
 
@@ -199,14 +230,14 @@ Controls:
 
 ## Hardware Actuator Sketch
 
-The Arduino sketch is stored under `hardware/`. It implements the submitted
-Milestone 2 actuator controller:
+The Arduino sketch is stored under `hardware/`. It implements the tuned
+Milestone 3 actuator controller:
 
 - Parses serial commands in the format `SPD:<speed>,STR:<steering>`.
-- Applies a 500 ms command timeout that stops the drive motor.
-- Drives the DC motor through PWM and direction pins.
+- Applies a 2 s command timeout that stops the drive motor.
+- Uses feedforward + P correction for speed tracking.
 - Reads encoder ticks on interrupt pins for speed estimation.
-- Runs a PID speed loop at 20 Hz.
+- Runs a 50 Hz control loop with filtered speed feedback.
 - Maps steering commands to a servo angle around the center position.
 
 Expected serial command example:
@@ -215,7 +246,7 @@ Expected serial command example:
 SPD:0.250,STR:0.100
 ```
 
-The teleop node can forward the same command format to an Arduino when launched
+The teleop nodes can forward the same command format to an Arduino when launched
 with `serial_forwarding_enabled:=true` and a valid serial port configured.
 
 ## Notes

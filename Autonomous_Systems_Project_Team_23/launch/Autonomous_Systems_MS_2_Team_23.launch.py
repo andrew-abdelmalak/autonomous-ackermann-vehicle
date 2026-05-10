@@ -216,7 +216,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'serial_port',
-            default_value='/dev/ttyACM0',
+            default_value='/dev/ttyUSB0',
             description='Arduino serial port used when serial forwarding is enabled.',
         ),
         DeclareLaunchArgument(

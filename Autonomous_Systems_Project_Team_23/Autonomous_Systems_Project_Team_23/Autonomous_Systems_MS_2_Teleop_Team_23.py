@@ -76,19 +76,19 @@ class AutonomousSystemsMS2TeleopTeam23(Node):
             'right_steering_joint_name',
             'front_right_wheel_steering_joint',
         )
-        self.declare_parameter('publish_rate_hz', 10.0)
+        self.declare_parameter('publish_rate_hz', 20.0)
         self.declare_parameter('initial_speed', 0.0)
         self.declare_parameter('lane', 0.0)
         self.declare_parameter('desired_speed', 0.25)
         self.declare_parameter('desired_lane', 0.0)
-        self.declare_parameter('linear_step', 0.05)
-        self.declare_parameter('steering_step', 0.10)
-        self.declare_parameter('steering_rate_limit', 1.0)
+        self.declare_parameter('linear_step', 0.10)
+        self.declare_parameter('steering_step', 0.15)
+        self.declare_parameter('steering_rate_limit', 3.0)
         self.declare_parameter('wheel_base', 1.0)
-        self.declare_parameter('max_speed', 0.5)
+        self.declare_parameter('max_speed', 1.0)
         self.declare_parameter('max_turn_rate', 0.5)
         self.declare_parameter('serial_forwarding_enabled', False)
-        self.declare_parameter('serial_port', '/dev/ttyACM0')
+        self.declare_parameter('serial_port', '/dev/ttyUSB0')
         self.declare_parameter('serial_baudrate', 115200)
 
         self.command_topic = self.get_parameter('command_topic').value
@@ -230,7 +230,7 @@ class AutonomousSystemsMS2TeleopTeam23(Node):
         self.command_publisher.publish(command)
         self.forward_serial_command(
             self.current_linear,
-            self.applied_steering,
+            self.current_angular,
         )
 
         if self.shutdown_requested:
