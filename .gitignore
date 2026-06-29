@@ -1,43 +1,50 @@
-# .gitignore — ROS 2 Python Package
-
-# ROS 2 build and install artifacts
+# ROS 2
 build/
 install/
 log/
 
-# Python bytecode
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
-*.pyc
-*.pyd
-
-# Python virtual environments
 .venv/
 venv/
 env/
-
-# Distribution / packaging
 *.egg-info/
 dist/
-*.egg
 
-# Editor metadata
-.vscode/
-.idea/
-*.swp
-*~
+# LaTeX
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.toc
+paper/*.synctex.gz
+paper/*.fdb_latexmk
+paper/*.fls
 
-# OS metadata
+# OS / editor
 .DS_Store
 Thumbs.db
-desktop.ini
+*.swp
+*.swo
+.idea/
+.vscode/
+*.code-workspace
 
-# ROS 2 generated files
-*.bak
-colcon-build-config.yaml
+# Media
+*.mp4
+*.avi
+*.mov
 
-# Test artifacts
-.pytest_cache/
-htmlcov/
-.coverage
+# PDF
+*.pdf
+
+# Archives
+*.rar
+*.zip
+
+# Secrets
+.env
+*.key
