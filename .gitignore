@@ -39,7 +39,7 @@ Thumbs.db
 *.mov
 
 # PDF
-*.pdf
+paper/*.pdf
 
 # Archives
 *.rar
