@@ -1,0 +1,4 @@
+# ROS 2 Jazzy (system install — see https://docs.ros.org/en/jazzy/)
+# Python dependencies for ROS 2 nodes:
+numpy>=1.24
+# Additional system packages: ros-jazzy-ros-gz-bridge, ros-jazzy-ros2-control
