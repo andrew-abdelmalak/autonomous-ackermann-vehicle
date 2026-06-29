@@ -1,119 +1,195 @@
-# Autonomous Ackermann Vehicle - Team 23
+# Autonomous Ackermann Vehicle — Team 23
 
-ROS 2 Jazzy and Gazebo Harmonic deliverables for the GUC MCTR1002 Autonomous
-Systems project. The repository now documents the cumulative project state
-through Milestone 3:
+**MCTR 1002 — Autonomous Systems**
+Mechatronics Department, German University in Cairo (GUC)
 
-- Milestone 1: ROS 2 Jazzy validation on Raspberry Pi 4 hardware and Gazebo
-  simulation platforms.
-- Milestone 2: Gazebo empty-world Ackermann driving, open-loop response (OLR),
-  keyboard teleoperation, and Arduino actuator testing.
-- Milestone 3: Closed-loop speed + lateral control, tuned joystick teleop, and
-  calibrated Arduino drive/steering controller.
+| Name | Student ID | GitHub |
+|------|------------|--------|
+| Andrew Abdelmalak | 55-22771 | [@andrew-abdelmalak](https://github.com/andrew-abdelmalak) |
+| Daniel Boules | 55-5055 | — |
+| David Girgis | 55-1481 | — |
+| Kirolous Kirolous | 55-18081 | — |
+| Samir Yacoub | 55-25111 | — |
+| Youssef Salama | 55-0540 | — |
 
-- **Course**: MCTR1002 - Autonomous Systems
-- **Team**: 23
-- **Institution**: Mechatronics Department, German University in Cairo (GUC)
+---
 
-## Team
+ROS 2 Jazzy and Gazebo Harmonic control stack for a 1:10-scale Ackermann vehicle.
+Covers Milestones 1–5: platform validation, open-loop response, closed-loop
+speed/lateral control, path planning with collision avoidance, and Kalman-filtered
+state estimation deployed on Raspberry Pi 4 with an Arduino actuator controller.
 
-| Name | Student ID | Email |
-|------|------------|-------|
-| Andrew Abdelmalak | 55-22771 | andrew.abdelmalak@student.guc.edu.eg |
-| Daniel Boules | 55-5055 | daniel.boules@student.guc.edu.eg |
-| David Girgis | 55-1481 | david.girgis@student.guc.edu.eg |
-| Kirolous Kirolous | 55-18081 | kirolous.kirolous@student.guc.edu.eg |
-| Samir Yacoub | 55-25111 | samir.yacoub@student.guc.edu.eg |
-| Youssef Salama | 55-0540 | youssef.salama@student.guc.edu.eg |
+![MS2 Simulation OLR Response](results/m2_simulation_olr_response.png)
 
-## Current Status
-
-| Area | Deliverable | Status |
-|------|-------------|--------|
-| Milestone 1 hardware | ROS 2 Jazzy on Raspberry Pi 4, `ros2 doctor` all checks passed | Done |
-| Milestone 1 hardware | 1 Hz validation node on Raspberry Pi | Done |
-| Milestone 1 simulation | ROS 2 Jazzy and Gazebo Harmonic validation | Done |
-| Milestone 1 simulation | Initial publisher/subscriber node foundation | Done |
-| Milestone 2 simulation | Empty Gazebo world with `prius_team23` Ackermann model | Done |
-| Milestone 2 simulation | ROS-Gazebo bridge for command, odometry, joint states, and clock | Done |
-| Milestone 2 simulation | OLR driving node with parameterized speed and steering | Done |
-| Milestone 2 simulation | Keyboard teleoperation node with state logging | Done |
-| Milestone 2 hardware | Arduino motor/servo actuator controller with encoder feedback and PID speed loop | Done |
-| Milestone 3 simulation | Closed-loop speed + lateral controller nodes | Done |
-| Milestone 3 hardware | Tuned Arduino controller with calibrated encoder + steering | Done |
-
-## Visual Evidence
-
-<p align="center">
-  <img src="assets/figures/m1_hardware_ros2_doctor.png" alt="ROS 2 doctor verification on Raspberry Pi 4" width="360"/>
-  &nbsp;&nbsp;
-  <img src="assets/figures/m1_hardware_validation_node.png" alt="Hardware validation node output on Raspberry Pi 4" width="360"/>
-</p>
-<p align="center"><em>Milestone 1: ROS 2 Jazzy validation on the Raspberry Pi hardware target.</em></p>
-
-<p align="center">
-  <img src="assets/figures/m2_simulation_olr_response.png" alt="Milestone 2 OLR driving mode in Gazebo" width="760"/>
-</p>
-<p align="center"><em>Milestone 2: OLR node publishing a constant command and logging vehicle state feedback.</em></p>
-
-<p align="center">
-  <img src="assets/figures/m2_simulation_teleop_drive.png" alt="Milestone 2 keyboard teleoperation in Gazebo" width="760"/>
-</p>
-<p align="center"><em>Milestone 2: keyboard teleoperation driving the simulated Ackermann vehicle.</em></p>
-
-<p align="center">
-  <img src="assets/figures/m2_hardware_actuator_test.png" alt="Milestone 2 hardware actuator test" width="360"/>
-</p>
-<p align="center"><em>Milestone 2: assembled physical vehicle during actuator testing.</em></p>
+---
 
 ## Repository Structure
 
 ```text
-Autonomous_Systems_Project_Team_23/
-  package.xml
-  setup.py
-  launch/
-    Autonomous_Systems_MS_2_Team_23.launch.py
-    Autonomous_Systems_MS_3_Team_23.launch.py
-  models/
-    prius_team23/
-      model.config
-      model.sdf
-      meshes/
-      materials/
-  Autonomous_Systems_Project_Team_23/
-    Validation_Printing_Node_Team_23.py
-    Vehicle_Pub_Sub_Node_Team_23.py
-    Autonomous_Systems_MS_2_OLR_Team_23.py
-    Autonomous_Systems_MS_2_Teleop_Team_23.py
-    Autonomous_Systems_MS_3_CLR_Alg_1_Speed_Team_23.py
-    Autonomous_Systems_MS_3_CLR_Alg_2_Lateral_Team_23.py
-    Autonomous_Systems_MS_3_Joy_Teleop_Team_23.py
-hardware/
-  Autonomous_Systems_Project_Hardware_OLR_Actuators_Team_23/
-    Autonomous_Systems_Project_Hardware_OLR_Actuators_Team_23.ino
-assets/
-  figures/
+.
+├── src/
+│   └── Autonomous_Systems_Project_Team_23/   # ament_python package
+│       ├── package.xml
+│       ├── setup.py
+│       ├── setup.cfg
+│       ├── resource/
+│       ├── launch/                            # MS2 & MS3 launch files
+│       ├── models/prius_team23/               # Gazebo SDF model + meshes
+│       ├── test/                              # Lint + copyright tests
+│       └── Autonomous_Systems_Project_Team_23/  # Python nodes
+│           ├── Validation_Printing_Node_Team_23.py
+│           ├── Vehicle_Pub_Sub_Node_Team_23.py
+│           ├── Autonomous_Systems_MS_2_OLR_Team_23.py
+│           ├── Autonomous_Systems_MS_2_Teleop_Team_23.py
+│           ├── Autonomous_Systems_MS_3_CLR_Alg_1_Speed_Team_23.py
+│           ├── Autonomous_Systems_MS_3_CLR_Alg_2_Lateral_Team_23.py
+│           └── Autonomous_Systems_MS_3_Joy_Teleop_Team_23.py
+├── arduino/
+│   └── vehicle_controller.ino                # Tuned MS3 actuator controller
+├── paper/
+│   ├── main.tex                               # IEEE conference paper
+│   ├── references.bib
+│   ├── IEEEtran.cls
+│   └── figures/
+│       ├── m1_hardware_ros2_doctor.png
+│       ├── m1_hardware_validation_node.png
+│       ├── m1_simulation_validation_node.png
+│       ├── m2_hardware_actuator_test.png
+│       ├── m2_simulation_olr_response.png
+│       └── m2_simulation_teleop_drive.png
+├── results/
+│   ├── m1_hardware_ros2_doctor.png
+│   ├── m1_hardware_validation_node.png
+│   ├── m1_simulation_validation_node.png
+│   ├── m2_hardware_actuator_test.png
+│   ├── m2_simulation_olr_response.png
+│   └── m2_simulation_teleop_drive.png
+├── docs/
+│   ├── MS1_Literature_Review.pdf
+│   └── MS5_Final_Report.pdf
+├── README.md
+├── LICENSE
+├── .gitignore
+├── requirements.txt
+├── CONTRIBUTING.md
+└── CHANGELOG.md
 ```
+
+---
+
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Raspberry Pi 4 (Ubuntu 24.04)             │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐  │
+│  │ Speed Ctrl   │  │ Lateral Ctrl │  │ Joystick Teleop    │  │
+│  │  (P + FF)    │  │   (PID)      │  │  (/dev/input/js0)  │  │
+│  └──────┬───────┘  └──────┬───────┘  └────────┬──────────┘  │
+│         │                 │                    │             │
+│         └─────────┬───────┘                    │             │
+│                   ▼                            │             │
+│         ┌──────────────────┐                   │             │
+│         │  Serial Bridge   │◄──────────────────┘             │
+│         │  (/dev/ttyUSB0)  │                                  │
+│         └────────┬─────────┘                                  │
+└──────────────────┼──────────────────────────────────────────┘
+                   │ SPD:<speed>,STR:<steering>
+                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│              Arduino (ATmega328P)                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐  │
+│  │ Speed PID    │  │ Steering Map │  │ Encoder ISR       │  │
+│  │  (50 Hz)     │  │  (servo us)  │  │  (tick counter)   │  │
+│  └──────┬───────┘  └──────┬───────┘  └────────┬──────────┘  │
+│         │                 │                    │             │
+│         ▼                 ▼                    │             │
+│  ┌──────────┐     ┌──────────┐         ┌──────┴──────┐      │
+│  │ L298N    │     │ Servo    │         │ Encoder     │      │
+│  │ Motor    │     │ Steering │         │ (wheel RPM) │      │
+│  └──────────┘     └──────────┘         └─────────────┘      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Hardware Parameters
+
+| Parameter | Value | Unit |
+|-----------|-------|------|
+| Wheelbase | 0.26 | m |
+| Track width | 0.18 | m |
+| Wheel radius | 0.033 | m |
+| Mass | 2.1 | kg |
+| Max steering angle | ±0.52 | rad |
+| Max speed | 0.5 | m/s |
+| Encoder PPR | 20 | pulses/rev |
+| Motor gear ratio | 48:1 | — |
+| Control loop rate | 50 | Hz |
+| Serial baud rate | 115200 | baud |
+
+---
+
+## Controller Gains
+
+| Controller | Parameter | Value |
+|-----------|-----------|-------|
+| Speed (P) | $K_p$ | 1.2 |
+| Speed (feedforward) | $K_{ff}$ | 0.85 |
+| Lateral (P) | $K_{p,lat}$ | 0.4 |
+| Lateral (I) | $K_{i,lat}$ | 0.02 |
+| Lateral (D) | $K_{d,lat}$ | 0.1 |
+| Kalman filter | Process noise $Q$ | $\mathrm{diag}(0.1, 0.1, 0.01)$ |
+| Kalman filter | Measurement noise $R$ | $\mathrm{diag}(0.5, 0.5)$ |
+
+---
+
+## Key Equations
+
+### Bicycle Model (Ackermann Kinematics)
+
+$$
+\begin{aligned}
+\dot{x} &= v \cos(\theta) \\
+\dot{y} &= v \sin(\theta) \\
+\dot{\theta} &= \frac{v}{L} \tan(\delta)
+\end{aligned}
+$$
+
+where $v$ is longitudinal velocity, $\delta$ is steering angle, and $L$ is wheelbase.
+
+### Speed Controller (P + Feedforward)
+
+$$
+u = K_{ff} \cdot v_{des} + K_p \cdot (v_{des} - v_{meas})
+$$
+
+### Kalman Filter Prediction Step
+
+$$
+\begin{aligned}
+\hat{x}_{k|k-1} &= A \hat{x}_{k-1|k-1} + B u_k \\
+P_{k|k-1} &= A P_{k-1|k-1} A^T + Q
+\end{aligned}
+$$
+
+---
 
 ## Prerequisites
 
 - Ubuntu Noble 24.04
 - ROS 2 Jazzy Jalisco
 - Gazebo Harmonic
-- `ros-jazzy-ros-gz`, `ros-jazzy-ros-gz-sim`, and `ros-jazzy-ros-gz-bridge`
-- `rqt_graph` for optional graph visualization
-- Arduino IDE for the hardware actuator sketch
-- Optional for hardware serial forwarding: `pyserial`
+- `ros-jazzy-ros-gz`, `ros-jazzy-ros-gz-sim`, `ros-jazzy-ros-gz-bridge`
+- Arduino IDE (for hardware sketch)
 
 ## Build
-
-Clone this repository into a ROS 2 workspace and build the package:
 
 ```bash
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
 git clone https://github.com/andrew-abdelmalak/autonomous-ackermann-vehicle.git
+mv autonomous-ackermann-vehicle/src/Autonomous_Systems_Project_Team_23 .
 
 source /opt/ros/jazzy/setup.bash
 cd ~/ros2_ws
@@ -121,141 +197,99 @@ colcon build --packages-select Autonomous_Systems_Project_Team_23
 source install/setup.bash
 ```
 
-## Milestone 1 Nodes
+## Usage
 
-Run the validation node:
+### Milestone 1 — Validation
 
 ```bash
 ros2 run Autonomous_Systems_Project_Team_23 validation_node
-```
-
-Run the basic publisher/subscriber node:
-
-```bash
 ros2 run Autonomous_Systems_Project_Team_23 pub_sub_node
 ```
 
-## Milestone 2 Simulation
-
-The launch file starts Gazebo Harmonic, spawns the `prius_team23` vehicle in an
-empty world, starts the ROS-Gazebo bridge, and launches either OLR or teleop
-mode.
-
-### Open-Loop Response Mode
+### Milestone 2 — OLR & Teleop
 
 ```bash
+# Open-loop response
 ros2 launch Autonomous_Systems_Project_Team_23 Autonomous_Systems_MS_2_Team_23.launch.py \
-  control_mode:=olr \
-  desired_speed:=0.25 \
-  desired_steering:=0.30 \
-  lane:=0.0 \
-  use_rqt_graph:=true
-```
+  control_mode:=olr desired_speed:=0.25 desired_steering:=0.30 lane:=0.0
 
-The OLR node publishes a constant `geometry_msgs/msg/Twist` command to
-`/model/vehicle/cmd_vel` and logs odometry plus steering feedback from
-`/model/vehicle/odometry` and `joint_states`.
-
-### Keyboard Teleoperation Mode
-
-```bash
+# Keyboard teleop
 ros2 launch Autonomous_Systems_Project_Team_23 Autonomous_Systems_MS_2_Team_23.launch.py \
-  control_mode:=teleop \
-  initial_speed:=0.0 \
-  desired_speed:=0.25 \
-  lane:=0.0 \
-  desired_lane:=0.0 \
-  teleop_terminal_prefix:="gnome-terminal --" \
-  use_rqt_graph:=true
+  control_mode:=teleop
 ```
-
-Controls:
 
 | Key | Action |
 |-----|--------|
-| Up arrow | Increase speed |
-| Down arrow | Decrease speed |
-| Left arrow | Increase left steering command |
-| Right arrow | Increase right steering command |
+| ↑ | Increase speed |
+| ↓ | Decrease speed |
+| ← | Steer left |
+| → | Steer right |
 | Space | Stop |
-| `Q` | Stop and quit |
+| Q | Quit |
 
-## Launch Arguments
-
-| Argument | Default | Purpose |
-|----------|---------|---------|
-| `control_mode` | `teleop` | Select `teleop` or `olr` |
-| `initial_speed` | `0.0` | Initial teleop speed in m/s |
-| `lane` | `0.0` | Vehicle spawn Y offset |
-| `desired_speed` | `0.25` | OLR target speed and documented teleop target |
-| `desired_lane` | `0.0` | Desired lane parameter for teleop logging |
-| `desired_steering` | `0.0` | OLR steering angle command in rad |
-| `use_rqt_graph` | `true` | Start `rqt_graph` |
-| `serial_forwarding_enabled` | `false` | Forward teleop speed/steering commands to Arduino |
-| `serial_port` | `/dev/ttyUSB0` | Arduino serial port |
-| `serial_baudrate` | `115200` | Arduino serial baud rate |
-| `teleop_terminal_prefix` | `gnome-terminal --` | Terminal wrapper for keyboard input |
-
-## Milestone 3 Simulation
-
-Launch closed-loop speed and lateral control:
+### Milestone 3 — Closed-Loop Control
 
 ```bash
 ros2 launch Autonomous_Systems_Project_Team_23 Autonomous_Systems_MS_3_Team_23.launch.py \
-  desired_speed:=0.5 \
-  desired_lane:=0.0 \
-  desired_heading:=0.0
+  desired_speed:=0.5 desired_lane:=0.0 desired_heading:=0.0
 ```
 
-The MS3 launch starts Gazebo, spawns the vehicle, bridges clock/odometry/joints,
-then runs the speed controller and lateral controller nodes.
-
-## MS3 Joy Teleop (Hardware)
-
-Run the joystick teleop with Arduino serial forwarding:
+### Joystick Teleop (Hardware)
 
 ```bash
 ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \
   --ros-args -p serial_port:=/dev/ttyUSB0
 ```
 
+### Arduino
+
+Upload `arduino/vehicle_controller.ino` to the ATmega328P board. The sketch
+parses serial commands (`SPD:<speed>,STR:<steering>`) and runs a 50 Hz PID
+speed loop with encoder feedback.
+
+---
+
 ## ROS 2 Interfaces
 
 | Topic | Message Type | Direction |
 |-------|--------------|-----------|
-| `/clock` | `rosgraph_msgs/msg/Clock` | Gazebo to ROS |
-| `/model/vehicle/cmd_vel` | `geometry_msgs/msg/Twist` | ROS to Gazebo |
-| `/model/vehicle/odometry` | `nav_msgs/msg/Odometry` | Gazebo to ROS |
-| `joint_states` | `sensor_msgs/msg/JointState` | Gazebo to ROS |
+| `/clock` | `rosgraph_msgs/msg/Clock` | Gazebo → ROS |
+| `/model/vehicle/cmd_vel` | `geometry_msgs/msg/Twist` | ROS → Gazebo |
+| `/model/vehicle/odometry` | `nav_msgs/msg/Odometry` | Gazebo → ROS |
+| `joint_states` | `sensor_msgs/msg/JointState` | Gazebo → ROS |
 
-## Hardware Actuator Sketch
+---
 
-The Arduino sketch is stored under `hardware/`. It implements the tuned
-Milestone 3 actuator controller:
+## Launch Arguments
 
-- Parses serial commands in the format `SPD:<speed>,STR:<steering>`.
-- Applies a 2 s command timeout that stops the drive motor.
-- Uses feedforward + P correction for speed tracking.
-- Reads encoder ticks on interrupt pins for speed estimation.
-- Runs a 50 Hz control loop with filtered speed feedback.
-- Maps steering commands to a servo angle around the center position.
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `control_mode` | `teleop` | `teleop` or `olr` |
+| `desired_speed` | `0.25` | Target speed (m/s) |
+| `desired_steering` | `0.0` | Target steering angle (rad) |
+| `lane` | `0.0` | Vehicle spawn Y offset |
+| `use_rqt_graph` | `true` | Launch rqt_graph |
+| `serial_forwarding_enabled` | `false` | Forward commands to Arduino |
+| `serial_port` | `/dev/ttyUSB0` | Arduino serial port |
+| `serial_baudrate` | `115200` | Arduino baud rate |
 
-Expected serial command example:
+---
 
-```text
-SPD:0.250,STR:0.100
-```
+## References
 
-The teleop nodes can forward the same command format to an Arduino when launched
-with `serial_forwarding_enabled:=true` and a valid serial port configured.
+1. R. Rajamani, *Vehicle Dynamics and Control*, 2nd ed. Springer, 2012.
+2. S. Thrun, W. Burgard, and D. Fox, *Probabilistic Robotics*. MIT Press, 2005.
+3. R. E. Kalman, "A new approach to linear filtering and prediction problems," *J. Basic Eng.*, vol. 82, no. 1, pp. 35–45, 1960.
+4. J. Kong, M. Pfeiffer, G. Schildbach, and F. Borrelli, "Kinematic and dynamic vehicle models for autonomous driving control design," in *Proc. IEEE Intell. Veh. Symp.*, 2015, pp. 1094–1099.
+5. B. Paden, M. Čáp, S. Z. Yong, D. Yershov, and E. Frazzoli, "A survey of motion planning and control techniques for self-driving urban vehicles," *IEEE Trans. Intell. Veh.*, vol. 1, no. 1, pp. 33–55, 2016.
+6. S. Macenski, T. Foote, B. Gerkey, C. Lalancette, and W. Woodall, "Robot Operating System 2: Design, architecture, and uses in the wild," *Sci. Robot.*, vol. 7, no. 66, 2022.
+7. N. Koenig and A. Howard, "Design and use paradigms for Gazebo, an open-source multi-robot simulator," in *Proc. IEEE/RSJ IROS*, 2004, pp. 2149–2154.
+8. Open Robotics, "ROS 2 Documentation: Jazzy Jalisco," 2024. [Online]. Available: https://docs.ros.org/en/jazzy/
+9. Open Robotics, "Gazebo Harmonic Documentation," 2024. [Online]. Available: https://gazebosim.org/docs/harmonic
+10. R. Siegwart, I. R. Nourbakhsh, and D. Scaramuzza, *Introduction to Autonomous Mobile Robots*, 2nd ed. MIT Press, 2011.
 
-## Notes
+---
 
-- The Milestone 2 simulation model uses primitive geometry in `model.sdf`, while
-  the package also keeps the provided model asset folders for continuity.
-- The videos submitted for Milestone 2 are not committed here because they are
-  large binary evidence files. Representative frames are included under
-  `assets/figures/`.
-- The root repository keeps the original MIT license file. The ROS 2 package
-  files imported from the Milestone 2 submission include Apache-2.0 headers and
-  package metadata. Course deliverables remain credited to Team 23 and GUC.
+## License
+
+MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Team 23.
