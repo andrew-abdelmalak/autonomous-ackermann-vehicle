@@ -4,12 +4,9 @@
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{booktabs}
-\usepackage{url}
 \usepackage{graphicx}
 \usepackage{tikz}
-\usepackage{pgfplots}
-\pgfplotsset{compat=1.18}
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
+\usetikzlibrary{arrows.meta,positioning}
 \usepackage{hyperref}
 
 \begin{document}
@@ -91,7 +88,7 @@ vehicle dynamics, perception, planning, and control before safe autonomous
 navigation can be demonstrated. For an Ackermann-steered platform, this chain
 must respect both the software communication model and the physical
 constraints of front-wheel steering geometry, making integration a
-recognized challenge \cite{Alkhareif2021}.
+recognized challenge \cite{Jain2021}.
 
 This paper documents the cumulative work of six undergraduate students in the
 MCTR~1002 Autonomous Systems course at the German University in Cairo (GUC).
@@ -147,7 +144,7 @@ model that enables modular robotics systems where perception, planning,
 control, and hardware-interface nodes communicate via publish-subscribe
 topics \cite{ROS2JazzyDocs}. Recent surveys of autonomous vehicle
 architectures identify this modular pattern as essential for staged
-development and iterative testing \cite{Alkhareif2021}, motivating our
+development and iterative testing \cite{Jain2021}, motivating our
 milestone-by-milestone approach.
 
 \subsection{Ackermann Steering Geometry}
@@ -157,8 +154,8 @@ center of rotation. The geometric relation is
   \cot\delta_{o} - \cot\delta_{i} = \frac{T}{L},
   \label{eq:ackermann}
 \end{equation}
-where $\delta_{o}$ and $\delta_{i}$ are the outer and inner steering angles,
-$T$ is the track width, and $L$ is the wheelbase \cite{Chen2023}. Our
+In \eqref{eq:ackermann}, $\delta_{o}$ and $\delta_{i}$ are the outer and inner steering angles,
+$T$ is the track width, and $L$ is the wheelbase \cite{Xu2023}. Our
 simulation model uses a Gazebo Ackermann steering plugin with a wheelbase of
 $1.0\,\mathrm{m}$ in simulation and $0.255\,\mathrm{m}$ on the scaled hardware
 platform.
@@ -167,15 +164,15 @@ platform.
 Accurate state estimation is critical for autonomous navigation.
 Kalman-filter-based fusion of encoder and inertial measurements has been
 applied to Ackermann mobile robots with demonstrated improvements over
-open-loop odometry \cite{Promkaew2024}. Vehicle localization through sensor
+open-loop odometry \cite{Peiris2024}. Vehicle localization through sensor
 fusion for autonomous driving continues to be an active research area, with
 LiDAR, camera, and IMU configurations achieving lane-level accuracy
 \cite{Georgiev2025}.
 
 \subsection{Path Planning and Control}
 Trajectory planning and tracking control are tightly coupled in autonomous
-driving stacks. Real-time dynamic planning \cite{Wang2020}, MPC-based
-obstacle avoidance \cite{Li2022}, and electronic differential control for
+driving stacks. Real-time dynamic planning \cite{Wang2019}, MPC-based
+obstacle avoidance \cite{Wu2022}, and electronic differential control for
 multi-wheel Ackermann platforms \cite{Zhang2022} have been proposed. For
 lateral tracking, the Stanley controller \cite{Hoffmann2007} combines heading
 error and cross-track error with a speed-adaptive gain, making it well suited
@@ -191,7 +188,8 @@ hardware---that share an identical command intent: a desired longitudinal
 speed $v_{\mathrm{des}}$ and a desired steering angle $\delta_{\mathrm{des}}$.
 In simulation, these are published as a \texttt{geometry\_msgs/Twist} to
 Gazebo. On hardware, they are serialized as ASCII strings sent over USB to
-an Arduino controller.
+an Arduino controller. Figure~\ref{fig:arch_tikz} summarizes the complete
+system data flow across both paths.
 
 \begin{figure*}[t]
   \centering
@@ -282,7 +280,9 @@ The hardware computer is a Raspberry Pi~4 (4\,GB RAM, ARM Cortex-A72) running
 Ubuntu Noble~24.04. ROS\,2 Jazzy was installed from the official APT
 repository. The \texttt{ros2 doctor} tool reported all five health checks
 passing, covering network configuration, RMW implementation, package versions,
-Python environment, and middleware settings.
+Python environment, and middleware settings. Table~\ref{tab:doctor}
+summarizes the five diagnostic checks, and Fig.~\ref{fig:hw_ros2doctor}
+shows the corresponding \texttt{ros2 doctor} output.
 
 \begin{table}[htbp]
   \caption{Milestone~1 Hardware Diagnostic Results}
@@ -326,7 +326,8 @@ approximately 26\,s.
 The simulation platform is an ASUS ROG GA401QE (AMD Ryzen~9~5900HX, NVIDIA
 GTX~1650). ROS\,2 Jazzy and Gazebo Harmonic were installed alongside the
 \texttt{ros-jazzy-ros-gz} bridge package. A validation node confirmed correct
-ROS\,2 execution before vehicle-level integration.
+ROS\,2 execution before vehicle-level integration. Fig.~\ref{fig:sim_valnode}
+displays the simulation-side validation node output.
 
 \begin{figure}[htbp]
   \centering
@@ -381,7 +382,8 @@ model:
   \label{eq:yawrate}
 \end{equation}
 publishes the resulting \texttt{Twist}, and subscribes to odometry and joint
-states for logging.
+states for logging. Fig.~\ref{fig:m2_olr} illustrates the open-loop
+response in Gazebo Harmonic.
 
 \begin{figure}[htbp]
   \centering
@@ -397,7 +399,8 @@ adjust speed and steering, space issues a stop command, and \texttt{Q}
 triggers shutdown. Steering is rate-limited before yaw-rate conversion. The
 node includes optional serial forwarding in the format
 \texttt{SPD:<speed>,STR:<steering>}, maintaining alignment with the hardware
-command interface.
+command interface. Fig.~\ref{fig:m2_teleop} shows the teleoperation
+driving mode with real-time odometry feedback.
 
 \begin{figure}[htbp]
   \centering
@@ -438,8 +441,9 @@ The PID speed controller output is:
   u(t) = K_p e(t) + K_i \int_{0}^{t} e(\tau)\,d\tau + K_d \frac{d e(t)}{dt},
   \label{eq:pid}
 \end{equation}
-where $e(t) = v_{\mathrm{des}} - v_{\mathrm{meas}}$ is the speed error.
-Table~\ref{tab:gains} lists the tuned gains.
+In \eqref{eq:pid}, $e(t) = v_{\mathrm{des}} - v_{\mathrm{meas}}$ is the speed error.
+Table~\ref{tab:gains} lists the tuned gains. Fig.~\ref{fig:m2_hw}
+demonstrates the physical actuator test on the assembled scaled vehicle.
 
 \begin{figure}[htbp]
   \centering
@@ -467,7 +471,7 @@ The lateral controller implements the Stanley steering law \cite{Hoffmann2007}:
   \delta(t) = \theta_e(t) + \arctan\!\left(\frac{k \cdot e_{\mathrm{ct}}(t)}{v(t)}\right),
   \label{eq:stanley}
 \end{equation}
-where $\theta_e$ is the heading error, $e_{\mathrm{ct}}$ is the cross-track
+In \eqref{eq:stanley}, $\theta_e$ is the heading error, $e_{\mathrm{ct}}$ is the cross-track
 error, $v$ is the vehicle speed, and $k$ is the tunable gain.
 
 \subsection{Dead-Reckoning Odometry}
@@ -586,6 +590,9 @@ Table~\ref{tab:gains} gives the complete set of controller gains.
     \bottomrule
   \end{tabular}
 \end{table}
+
+Fig.~\ref{fig:kf_structure} depicts the Kalman filter structure, combining
+odometry prediction with sensor measurements via the Kalman gain.
 
 \begin{figure}[htbp]
   \centering
