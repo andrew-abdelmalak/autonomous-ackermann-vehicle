@@ -1,0 +1,768 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
+\usepackage{hyperref}
+
+\begin{document}
+
+\title{Progressive Development of a ROS\,2 Ackermann Vehicle:\\
+From Hardware-Software Validation Through Closed-Loop Control,\\
+Path Planning, and Sensor Fusion on a Scaled Autonomous Platform}
+
+\author{
+\IEEEauthorblockN{Andrew Abdelmalak}
+\IEEEauthorblockA{\textit{Dept.\ of Mechatronics Engineering}\\
+\textit{German University in Cairo}\\
+Cairo, Egypt\\
+andrew.abdelmalak@student.guc.edu.eg}
+\and
+\IEEEauthorblockN{Daniel Boules}
+\IEEEauthorblockA{\textit{Dept.\ of Mechatronics Engineering}\\
+\textit{German University in Cairo}\\
+Cairo, Egypt\\
+daniel.boules@student.guc.edu.eg}
+\and
+\IEEEauthorblockN{David Girgis}
+\IEEEauthorblockA{\textit{Dept.\ of Mechatronics Engineering}\\
+\textit{German University in Cairo}\\
+Cairo, Egypt\\
+david.girgis@student.guc.edu.eg}
+\and
+\IEEEauthorblockN{Kirolous Kirolous}
+\IEEEauthorblockA{\textit{Dept.\ of Mechatronics Engineering}\\
+\textit{German University in Cairo}\\
+Cairo, Egypt\\
+kirolous.kirolous@student.guc.edu.eg}
+\and
+\IEEEauthorblockN{Samir Yacoub}
+\IEEEauthorblockA{\textit{Dept.\ of Mechatronics Engineering}\\
+\textit{German University in Cairo}\\
+Cairo, Egypt\\
+samir.yacoub@student.guc.edu.eg}
+\and
+\IEEEauthorblockN{Youssef Salama}
+\IEEEauthorblockA{\textit{Dept.\ of Mechatronics Engineering}\\
+\textit{German University in Cairo}\\
+Cairo, Egypt\\
+youssef.salama@student.guc.edu.eg}
+}
+
+\maketitle
+
+\begin{abstract}
+This paper presents the staged development of an autonomous Ackermann-steered
+scaled vehicle through five milestones in the MCTR~1002 Autonomous Systems
+course. Milestone~1 established the ROS\,2 Jazzy middleware on a Raspberry
+Pi~4 hardware computer and a desktop Gazebo Harmonic simulation environment.
+Milestone~2 extended this foundation with an Ackermann vehicle model, a
+ROS-Gazebo bridge, open-loop response and keyboard teleoperation driving
+modes, and a physical Arduino-based actuator stack with DC motor and steering
+servo. Milestone~3 added closed-loop speed and lateral control in simulation
+alongside a tuned hardware controller with encoder feedback. Milestone~4
+introduced path planning across three simulation tracks and integrated IMU and
+encoder odometry on the physical platform. Milestone~5 culminated in a
+discrete Kalman filter for state estimation, fusing noisy sensor measurements
+to enable headless autonomous navigation through lane-following, obstacle
+avoidance, and curved-track scenarios. We report complete system parameters,
+control gains, Kalman covariances, and track test results, and we provide a
+repeatable open-source ROS\,2 package and Arduino firmware.
+\end{abstract}
+
+\begin{IEEEkeywords}
+ROS 2, Ackermann steering, autonomous vehicle, Kalman filter, path planning
+\end{IEEEkeywords}
+
+% ============================================================
+\section{Introduction}
+\label{sec:intro}
+% ============================================================
+
+Autonomous wheeled vehicles require a chain of computation, middleware,
+vehicle dynamics, perception, planning, and control before safe autonomous
+navigation can be demonstrated. For an Ackermann-steered platform, this chain
+must respect both the software communication model and the physical
+constraints of front-wheel steering geometry, making integration a
+recognized challenge \cite{Alkhareif2021}.
+
+This paper documents the cumulative work of six undergraduate students in the
+MCTR~1002 Autonomous Systems course at the German University in Cairo (GUC).
+The project follows a staged development methodology---from bare-metal ROS\,2
+validation through complete autonomous track navigation---with each milestone
+building on the preceding one. Milestone~1 validated the ROS\,2 Jazzy
+environment on two platforms. Milestone~2 added vehicle-level driving modes
+and actuator testing. Milestone~3 introduced closed-loop control. Milestone~4
+integrated path planning and sensor odometry. Milestone~5 realized full system
+integration with Kalman-filtered localization.
+
+Despite the breadth of prior work on individual components, comprehensive
+open implementations linking ROS\,2 hardware validation, closed-loop control,
+path planning, and sensor fusion on a low-cost scaled platform remain scarce
+in the published literature. Our contributions are therefore:
+
+\begin{enumerate}
+  \item ROS\,2 Jazzy validation on a Raspberry Pi~4 (Ubuntu Noble~24.04, ARM64)
+        and an AMD Ryzen~9 laptop running Gazebo Harmonic;
+  \item an Ackermann vehicle model spawned in Gazebo and bridged to ROS\,2 via
+        \texttt{ros\_gz\_bridge};
+  \item open-loop response and keyboard teleoperation ROS\,2 Python nodes with
+        logged odometry and joint-state feedback;
+  \item closed-loop speed and lateral controllers with tunable PID and Stanley
+        gains, deployed in both simulation and hardware;
+  \item a tuned Arduino firmware that parses serial commands, performs PID speed
+        regulation with encoder feedback, and controls the steering servo;
+  \item a planning node that generates velocity profiles and lane-change
+        maneuvers across three Gazebo track environments (Empty, Racing, City);
+  \item integration of IMU and quadrature encoder measurements into a dead-reckoning
+        odometry pipeline, transmitted over serial at 115\,200 baud;
+  \item a discrete Kalman filter that fuses noisy odometry with kinematic
+        predictions, enabling headless autonomous track navigation on the
+        physical vehicle.
+\end{enumerate}
+
+The remainder of this paper is organized as follows. Section~\ref{sec:related}
+reviews the technical background in robotics middleware, Ackermann geometry,
+localization, and control. Section~\ref{sec:arch} presents the system
+architecture across all milestones. Sections~\ref{sec:m1} through~\ref{sec:ms5}
+detail each milestone's deliverables in chronological order.
+Section~\ref{sec:results} consolidates the achieved results, and
+Section~\ref{sec:future} discusses limitations and future extensions.
+
+% ============================================================
+\section{Related Work}
+\label{sec:related}
+% ============================================================
+
+\subsection{Robotics Middleware}
+ROS\,2 uses a decentralized Data Distribution Service (DDS) communication
+model that enables modular robotics systems where perception, planning,
+control, and hardware-interface nodes communicate via publish-subscribe
+topics \cite{ROS2JazzyDocs}. Recent surveys of autonomous vehicle
+architectures identify this modular pattern as essential for staged
+development and iterative testing \cite{Alkhareif2021}, motivating our
+milestone-by-milestone approach.
+
+\subsection{Ackermann Steering Geometry}
+The classic Ackermann constraint aligns all wheels with a common instantaneous
+center of rotation. The geometric relation is
+\begin{equation}
+  \cot\delta_{o} - \cot\delta_{i} = \frac{T}{L},
+  \label{eq:ackermann}
+\end{equation}
+where $\delta_{o}$ and $\delta_{i}$ are the outer and inner steering angles,
+$T$ is the track width, and $L$ is the wheelbase \cite{Chen2023}. Our
+simulation model uses a Gazebo Ackermann steering plugin with a wheelbase of
+$1.0\,\mathrm{m}$ in simulation and $0.255\,\mathrm{m}$ on the scaled hardware
+platform.
+
+\subsection{Localization and Sensor Fusion}
+Accurate state estimation is critical for autonomous navigation.
+Kalman-filter-based fusion of encoder and inertial measurements has been
+applied to Ackermann mobile robots with demonstrated improvements over
+open-loop odometry \cite{Promkaew2024}. Vehicle localization through sensor
+fusion for autonomous driving continues to be an active research area, with
+LiDAR, camera, and IMU configurations achieving lane-level accuracy
+\cite{Georgiev2025}.
+
+\subsection{Path Planning and Control}
+Trajectory planning and tracking control are tightly coupled in autonomous
+driving stacks. Real-time dynamic planning \cite{Wang2020}, MPC-based
+obstacle avoidance \cite{Li2022}, and electronic differential control for
+multi-wheel Ackermann platforms \cite{Zhang2022} have been proposed. For
+lateral tracking, the Stanley controller \cite{Hoffmann2007} combines heading
+error and cross-track error with a speed-adaptive gain, making it well suited
+to our scaled Ackermann platform.
+
+% ============================================================
+\section{System Architecture}
+\label{sec:arch}
+% ============================================================
+
+The project architecture spans two execution paths---simulation and
+hardware---that share an identical command intent: a desired longitudinal
+speed $v_{\mathrm{des}}$ and a desired steering angle $\delta_{\mathrm{des}}$.
+In simulation, these are published as a \texttt{geometry\_msgs/Twist} to
+Gazebo. On hardware, they are serialized as ASCII strings sent over USB to
+an Arduino controller.
+
+\begin{figure*}[t]
+  \centering
+  \begin{tikzpicture}[
+    node distance=0.6cm,
+    box/.style={draw, rectangle, rounded corners=2pt, text width=1.6cm,
+                align=center, minimum height=0.7cm, font=\footnotesize},
+    arrow/.style={-{Stealth[scale=0.7]}, thick}
+  ]
+    % --- Top row: computational platforms ---
+    \node[box, fill=blue!10] (pi)   {Raspberry\\Pi~4 +\\ROS\,2 Jazzy};
+    \node[box, fill=blue!10, right=of pi] (sim) {Desktop +\\Gazebo\\Harmonic};
+
+    % --- Row 2: ROS nodes ---
+    \node[box, fill=green!10, below=of pi, yshift=-0.3cm] (plan)   {Planning\\Node};
+    \node[box, fill=green!10, right=of plan] (speed)  {Speed\\Controller};
+    \node[box, fill=green!10, right=of speed] (lat)    {Lateral\\Controller};
+
+    % --- Row 3: bridge / serial ---
+    \node[box, fill=yellow!10, below=of speed, xshift=-0.9cm] (bridge) {ros\_gz\\Bridge};
+    \node[box, fill=yellow!10, right=of bridge, xshift=0.7cm] (serial) {Serial\\115\,200 bd};
+
+    % --- Row 4: firmware ---
+    \node[box, fill=orange!10, below=of bridge, xshift=0.9cm] (pico) {Pico\\Firmware};
+
+    % --- Row 5: actuators ---
+    \node[box, fill=red!10, below=of pico, xshift=-0.9cm] (l298n) {L298N\\+ Motor};
+    \node[box, fill=red!10, right=of l298n] (servo) {MG995\\Servo};
+
+    % --- Row 6: vehicle ---
+    \node[box, fill=gray!10, below=of pico, xshift=0.9cm, yshift=-0.5cm] (vehicle) {Ackermann\\Vehicle};
+
+    % --- Row 7: sensors ---
+    \node[box, fill=cyan!10, below=of vehicle, xshift=-0.9cm] (encoder) {Encoder};
+    \node[box, fill=cyan!10, right=of encoder] (imu)    {IMU\\MPU-6050};
+
+    % --- Feedback arrow (bottom loop) ---
+    \node[box, fill=cyan!10, right=of imu, xshift=0.5cm] (kf) {Kalman\\Filter};
+
+    % --- Arrows ---
+    \draw[arrow] (pi)  -- (plan);
+    \draw[arrow] (sim) -- (bridge);
+    \draw[arrow] (plan)  -- (speed);
+    \draw[arrow] (speed) -- (lat);
+    \draw[arrow] (lat)   -- (bridge);
+    \draw[arrow] (lat)   -- (serial);
+    \draw[arrow] (bridge) -- (vehicle);
+    \draw[arrow] (serial) -- (pico);
+    \draw[arrow] (pico)   -- (l298n);
+    \draw[arrow] (pico)   -- (servo);
+    \draw[arrow] (l298n)  -- (vehicle);
+    \draw[arrow] (servo)  -- (vehicle);
+    \draw[arrow] (vehicle) -- (encoder);
+    \draw[arrow] (vehicle) -- (imu);
+    \draw[arrow] (encoder) -- (pico);
+    \draw[arrow] (imu)     -- (pico);
+    \draw[arrow] (pico)    -- (serial);
+    \draw[arrow] (serial)  -- (kf);
+    \draw[arrow] (kf)      -- (plan);
+  \end{tikzpicture}
+  \caption{System architecture across all milestones. Simulation path
+           (top-right through Gazebo bridge) and hardware path (top-left
+           through serial, Pico firmware, actuators, and sensor feedback
+           loop with Kalman filter) share a common planning and control
+           layer.}
+  \label{fig:arch_tikz}
+\end{figure*}
+
+The ROS\,2 package, named \texttt{Autonomous\_Systems\_Project\_Team\_23}, is
+an \texttt{ament\_python} package. Each milestone adds launch files, node
+scripts, and Gazebo world assets while preserving the earlier functionality.
+Figure~\ref{fig:arch_tikz} shows the complete data flow. The planning node
+generates reference trajectories and publishes them to the speed and lateral
+controllers. These controllers produce actuator commands routed either to
+Gazebo through \texttt{ros\_gz\_bridge} or to the hardware vehicle through a
+serial interface. On the hardware path, the Pico firmware reads encoder and
+IMU data, transmits odometry over serial back to the Pi, and a Kalman filter
+closes the loop by providing corrected state estimates to the planner.
+
+% ============================================================
+\section{Milestone 1: ROS\,2 Environment Validation}
+\label{sec:m1}
+% ============================================================
+
+\subsection{Hardware Platform}
+
+The hardware computer is a Raspberry Pi~4 (4\,GB RAM, ARM Cortex-A72) running
+Ubuntu Noble~24.04. ROS\,2 Jazzy was installed from the official APT
+repository. The \texttt{ros2 doctor} tool reported all five health checks
+passing, covering network configuration, RMW implementation, package versions,
+Python environment, and middleware settings.
+
+\begin{table}[htbp]
+  \caption{Milestone~1 Hardware Diagnostic Results}
+  \label{tab:doctor}
+  \centering
+  \begin{tabular}{lc}
+    \toprule
+    Diagnostic item & Status \\
+    \midrule
+    Network interface & PASS \\
+    RMW implementation & PASS \\
+    ROS\,2 package versions & PASS \\
+    Python environment & PASS \\
+    Middleware configuration & PASS \\
+    \midrule
+    \textbf{Overall} & \textbf{5/5 PASS} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/m1_hardware_ros2_doctor.png}
+  \caption{Raspberry Pi~4 \texttt{ros2 doctor} output. All five checks pass.}
+  \label{fig:hw_ros2doctor}
+\end{figure}
+
+A custom validation node published a confirmation message at 1\,Hz on the
+Raspberry Pi. Fig.~\ref{fig:hw_valnode} shows continuous operation over
+approximately 26\,s.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/m1_hardware_validation_node.png}
+  \caption{Hardware validation node output on the target Raspberry Pi~4.}
+  \label{fig:hw_valnode}
+\end{figure}
+
+\subsection{Simulation Platform}
+
+The simulation platform is an ASUS ROG GA401QE (AMD Ryzen~9~5900HX, NVIDIA
+GTX~1650). ROS\,2 Jazzy and Gazebo Harmonic were installed alongside the
+\texttt{ros-jazzy-ros-gz} bridge package. A validation node confirmed correct
+ROS\,2 execution before vehicle-level integration.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/m1_simulation_validation_node.png}
+  \caption{Simulation-side ROS\,2 validation node execution.}
+  \label{fig:sim_valnode}
+\end{figure}
+
+% ============================================================
+\section{Milestone 2: Simulation Driving Modes}
+\label{sec:simms2}
+% ============================================================
+
+\subsection{Gazebo Vehicle Launch}
+
+An Ackermann vehicle model (\texttt{prius\_team23}) was built with an SDF
+description, mesh assets, and a Gazebo Ackermann steering plugin. The plugin
+binds front steering joints and four wheel joints with a steering limit of
+$0.5\,\mathrm{rad}$, wheelbase of $1.0\,\mathrm{m}$, wheel separation of
+$1.25\,\mathrm{m}$, and wheel radius of $0.3\,\mathrm{m}$ \cite{GazeboHarmonicDocs}.
+
+The launch file starts Gazebo Harmonic with \texttt{empty.sdf}, spawns the
+vehicle at a specified lane offset, starts the ROS-Gazebo bridge, and
+launches the selected driving node. Table~\ref{tab:bridge} lists the four
+bridged interfaces.
+
+\begin{table}[htbp]
+  \caption{ROS-Gazebo Bridge Interfaces (Milestone~2)}
+  \label{tab:bridge}
+  \centering
+  \small
+  \begin{tabular}{lll}
+    \toprule
+    Interface & ROS\,2 type & Role \\
+    \midrule
+    Clock bridge & \texttt{rosgraph\_msgs/Clock} & Simulation time \\
+    Command bridge & \texttt{geometry\_msgs/Twist} & Vehicle command \\
+    Odometry bridge & \texttt{nav\_msgs/Odometry} & Vehicle state \\
+    Joint-state bridge & \texttt{sensor\_msgs/JointState} & Steering feedback \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Open-Loop Response Node}
+
+The OLR node reads launch parameters for command and state topics, publish
+rate (10\,Hz), wheelbase, desired speed, and desired steering angle. It
+converts the steering-angle intent to a yaw rate using the kinematic bicycle
+model:
+\begin{equation}
+  \dot{\psi} = \frac{v \tan \delta}{L},
+  \label{eq:yawrate}
+\end{equation}
+publishes the resulting \texttt{Twist}, and subscribes to odometry and joint
+states for logging.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/m2_simulation_olr_response.png}
+  \caption{Open-loop response demonstration in Gazebo Harmonic.}
+  \label{fig:m2_olr}
+\end{figure}
+
+\subsection{Teleoperation Node}
+
+The teleoperation node provides interactive control via keyboard. Arrow keys
+adjust speed and steering, space issues a stop command, and \texttt{Q}
+triggers shutdown. Steering is rate-limited before yaw-rate conversion. The
+node includes optional serial forwarding in the format
+\texttt{SPD:<speed>,STR:<steering>}, maintaining alignment with the hardware
+command interface.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/m2_simulation_teleop_drive.png}
+  \caption{Teleoperation driving mode with real-time odometry feedback.}
+  \label{fig:m2_teleop}
+\end{figure}
+
+% ============================================================
+\section{Milestone 2: Hardware Actuation}
+\label{sec:hwms2}
+% ============================================================
+
+The hardware deliverable tests the physical vehicle's drive and steering
+actuators. The Arduino sketch configures an H-bridge motor driver (L298N),
+a steering servo (MG995), and quadrature encoder inputs.
+
+\subsection{Serial Command Interface}
+
+Commands are sent over USB serial at 115\,200\,baud in the form
+\texttt{SPD:<speed>,STR:<steering>}, where speed is in~$\mathrm{m/s}$ and
+steering is in~$\mathrm{rad}$. A 500\,ms timeout forces zero speed and clears
+the integral term for safety.
+
+\subsection{Motor and Steering Control}
+
+The controller estimates wheel speed from encoder ticks using
+$\mathrm{TICKS\_PER\_METER}=7000$ and the configured wheel diameter. A PID
+controller computes the speed error and constrains the PWM output to the
+usable range ($\mathrm{DRIVE\_PWM}=150$). Motor direction is set by the sign
+of the target speed. Steering commands are mapped to the servo range
+$[50, 130]$ around a $90^\circ$ center.
+
+\subsection{PID Speed Control Equation}
+
+The PID speed controller output is:
+\begin{equation}
+  u(t) = K_p e(t) + K_i \int_{0}^{t} e(\tau)\,d\tau + K_d \frac{d e(t)}{dt},
+  \label{eq:pid}
+\end{equation}
+where $e(t) = v_{\mathrm{des}} - v_{\mathrm{meas}}$ is the speed error.
+Table~\ref{tab:gains} lists the tuned gains.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.68\columnwidth]{figures/m2_hardware_actuator_test.png}
+  \caption{Physical actuator test. The assembled scaled vehicle with Arduino
+           controller driving the DC motor and steering servo.}
+  \label{fig:m2_hw}
+\end{figure}
+
+% ============================================================
+\section{Milestone 3: Closed-Loop Control}
+\label{sec:ms3}
+% ============================================================
+
+Milestone~3 extends open-loop driving to closed-loop speed and lateral
+tracking. A speed control node publishes a filtered speed command with
+acceleration limiting. The lateral controller subscribes to odometry and the
+speed command, applies a proportional-derivative lateral controller with
+heading feedback, and publishes the final \texttt{Twist} to Gazebo.
+
+\subsection{Stanley Lateral Controller}
+
+The lateral controller implements the Stanley steering law \cite{Hoffmann2007}:
+\begin{equation}
+  \delta(t) = \theta_e(t) + \arctan\!\left(\frac{k \cdot e_{\mathrm{ct}}(t)}{v(t)}\right),
+  \label{eq:stanley}
+\end{equation}
+where $\theta_e$ is the heading error, $e_{\mathrm{ct}}$ is the cross-track
+error, $v$ is the vehicle speed, and $k$ is the tunable gain.
+
+\subsection{Dead-Reckoning Odometry}
+
+The hardware platform computes dead-reckoning position from encoder and IMU
+measurements. At each time step $\Delta t$, the state propagates as:
+\begin{align}
+  x_{k+1} &= x_k + v_d \cos\theta_k \,\Delta t, \label{eq:odom_x} \\
+  y_{k+1} &= y_k + v_d \sin\theta_k \,\Delta t, \label{eq:odom_y} \\
+  \theta_{k+1} &= \theta_k + \dot{\psi}_k \,\Delta t, \label{eq:odom_th}
+\end{align}
+where $v_d$ is the measured drive speed and $\dot{\psi}_k$ is the yaw rate
+from \eqref{eq:yawrate} or from the IMU gyroscope.
+
+The launch files expose all gain parameters for speed and lateral tuning. On
+hardware, the Arduino controller was retuned with measured encoder counts at
+a 50\,Hz control loop rate. Feedforward scaling and a 2\,s serial timeout were
+added for safety.
+
+% ============================================================
+\section{Milestone 4: Path Planning and Sensor Integration}
+\label{sec:ms4}
+% ============================================================
+
+\subsection{Simulation Track Environments and Path Planning}
+
+Three Gazebo worlds were constructed for testing: an Empty~2-lane Track, a
+Racing Track with discrete obstacle blocks, and a curved City Track. A
+planning ROS\,2 node generates velocity profiles and target lane offsets based
+on track layout and predefined obstacle coordinates. For the Racing Track,
+the planner triggers lane changes before static obstacles and returns to the
+original lane after clearing them.
+
+\subsection{Hardware Sensor Integration}
+
+The physical vehicle was equipped with quadrature encoders for wheel speed
+measurement and an MPU-6050 IMU for heading estimation. The Pico firmware
+polls both sensors at 50\,Hz, computes the odometry state per
+\eqref{eq:odom_x}--\eqref{eq:odom_th}, and transmits the state vector
+$[v, x, y, \theta]$ over serial to the Raspberry Pi for logging and
+downstream consumption.
+
+\subsection{Track Configurations}
+
+Table~\ref{tab:tracks} summarizes the three test track configurations.
+
+\begin{table}[htbp]
+  \caption{Track Test Case Configurations}
+  \label{tab:tracks}
+  \centering
+  \small
+  \begin{tabular}{lccp{2.3cm}}
+    \toprule
+    Track & Lanes & Obstacles & Key Challenge \\
+    \midrule
+    Track~1: Empty & 2 & 0 & Speed profile tracking \\
+    Track~2: Racing & 2 & 3 & Lane-change obstacle avoidance \\
+    Track~3: City & 2 & 0 & Continuous curvature following \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================
+\section{Milestone 5: Kalman Filter Localization and Full Integration}
+\label{sec:ms5}
+% ============================================================
+
+Milestone~5 represents the culmination of the project: merging planning,
+control, and perception into a headless autonomous execution pipeline
+running locally on the Raspberry Pi.
+
+\subsection{Kalman Filter State Estimation}
+
+Real-world sensors produce noisy measurements. We implemented a discrete
+linear Kalman filter to fuse odometry predictions with sensor observations.
+The vehicle state vector is $\mathbf{x} = [x, y, \theta, v]^\top$.
+
+\subsubsection{Prediction Step}
+
+The state and covariance are predicted using the kinematic model:
+\begin{align}
+  \hat{\mathbf{x}}_{k|k-1} &= \mathbf{F}_k \hat{\mathbf{x}}_{k-1|k-1} + \mathbf{B}_k \mathbf{u}_k, \label{eq:kf_pred} \\
+  \mathbf{P}_{k|k-1} &= \mathbf{F}_k \mathbf{P}_{k-1|k-1} \mathbf{F}_k^\top + \mathbf{Q}_k, \label{eq:kf_cov}
+\end{align}
+where $\mathbf{F}_k$ is the state transition matrix derived from
+\eqref{eq:odom_x}--\eqref{eq:odom_th}, $\mathbf{B}_k$ maps the control input,
+and $\mathbf{Q}_k$ is the process noise covariance matrix.
+
+\subsubsection{Update Step}
+
+When a measurement $\mathbf{z}_k$ arrives, the filter updates its estimate:
+\begin{align}
+  \mathbf{K}_k &= \mathbf{P}_{k|k-1} \mathbf{H}_k^\top (\mathbf{H}_k \mathbf{P}_{k|k-1} \mathbf{H}_k^\top + \mathbf{R}_k)^{-1}, \label{eq:kf_gain} \\
+  \hat{\mathbf{x}}_{k|k} &= \hat{\mathbf{x}}_{k|k-1} + \mathbf{K}_k (\mathbf{z}_k - \mathbf{H}_k \hat{\mathbf{x}}_{k|k-1}), \label{eq:kf_update} \\
+  \mathbf{P}_{k|k} &= (\mathbf{I} - \mathbf{K}_k \mathbf{H}_k) \mathbf{P}_{k|k-1}, \label{eq:kf_cov_update}
+\end{align}
+where $\mathbf{K}_k$ is the Kalman gain, $\mathbf{H}_k$ is the observation
+matrix, and $\mathbf{R}_k$ is the measurement noise covariance.
+
+Table~\ref{tab:kf_params} lists the tuned noise covariance matrices.
+Table~\ref{tab:gains} gives the complete set of controller gains.
+
+\begin{table}[htbp]
+  \caption{Kalman Filter Noise Parameters}
+  \label{tab:kf_params}
+  \centering
+  \small
+  \begin{tabular}{lc}
+    \toprule
+    Parameter & Value \\
+    \midrule
+    Process noise $\sigma_x^2$, $\sigma_y^2$ & $0.01$ \\
+    Process noise $\sigma_\theta^2$ & $0.005$ \\
+    Process noise $\sigma_v^2$ & $0.001$ \\
+    Measurement noise $\sigma_{x}^2$, $\sigma_{y}^2$ & $0.05$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    node distance=0.8cm,
+    box/.style={draw, rectangle, rounded corners=2pt, text width=2.4cm,
+                align=center, minimum height=0.7cm, font=\footnotesize},
+    arrow/.style={-{Stealth[scale=0.7]}, thick}
+  ]
+    \node[box, fill=blue!10] (pred) {Odometry\\Prediction\\\eqref{eq:kf_pred}--\eqref{eq:kf_cov}};
+    \node[box, fill=green!10, right=of pred] (gain) {Kalman Gain\\Calculation\\\eqref{eq:kf_gain}};
+    \node[box, fill=orange!10, below=of gain] (update) {Measurement\\Update\\\eqref{eq:kf_update}--\eqref{eq:kf_cov_update}};
+    \node[box, fill=gray!10, left=of update] (out) {Corrected State\\$\hat{\mathbf{x}}_{k|k}$};
+
+    \draw[arrow] (pred) -- (gain);
+    \draw[arrow] (gain) -- (update);
+    \draw[arrow] (update) -- (out);
+    \draw[arrow] (out.north) -- ++(0,0.6) -| (pred.south);
+
+    \node[above=0.3cm of pred, font=\footnotesize] {$\mathbf{x}_{k-1|k-1}, \mathbf{u}_k$};
+    \node[right=0.3cm of gain, font=\footnotesize] {$\mathbf{z}_k$};
+    \node[below=0.3cm of out, font=\footnotesize] {$\to$ Planner/Controller};
+  \end{tikzpicture}
+  \caption{Kalman filter structure. Odometry prediction combines with
+           sensor measurements via the Kalman gain to produce corrected
+           state estimates that feed back into the planning loop.}
+  \label{fig:kf_structure}
+\end{figure}
+
+\subsection{Full System Integration}
+
+The filtered state $\hat{\mathbf{x}}_{k|k}$ is published as a ROS\,2 topic
+and consumed by the planning and control nodes running on the Raspberry Pi.
+The complete stack operates headlessly via SSH, with the Pico managing all
+low-level actuation and sensing. The vehicle was tested across all three
+track configurations described in Table~\ref{tab:tracks}.
+
+\begin{table}[htbp]
+  \caption{Controller Gains (Final Tuned Values)}
+  \label{tab:gains}
+  \centering
+  \small
+  \begin{tabular}{lccc}
+    \toprule
+    Parameter & Symbol & Simulation & Hardware \\
+    \midrule
+    Speed P gain & $K_p$ & 1.5 & 2.0 \\
+    Speed I gain & $K_i$ & 0.3 & 0.5 \\
+    Speed D gain & $K_d$ & 0.1 & 0.15 \\
+    Stanley gain & $k$ & 0.5 & 0.8 \\
+    Control rate & --- & 10\,Hz & 50\,Hz \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Hardware Components}
+
+Table~\ref{tab:hw_components} lists the hardware components comprising the
+scaled vehicle platform.
+
+\begin{table}[htbp]
+  \caption{Hardware Components}
+  \label{tab:hw_components}
+  \centering
+  \small
+  \begin{tabular}{ll}
+    \toprule
+    Component & Specification \\
+    \midrule
+    Main computer & Raspberry Pi~4, 4\,GB RAM \\
+    Microcontroller & Raspberry Pi Pico \\
+    Motor driver & L298N H-bridge \\
+    Drive motor & TT DC gear motor \\
+    Steering servo & MG995, range $[50,130]$ \\
+    IMU & MPU-6050, 6-DOF \\
+    Wheel encoder & Quadrature, $\mathrm{TICKS\_PER\_METER}=7000$ \\
+    Wheelbase (hardware) & $0.255\,\mathrm{m}$ \\
+    Max speed (hardware) & $1.0\,\mathrm{m/s}$ \\
+    Max speed (sim) & $0.40\,\mathrm{m/s}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================
+\section{Results}
+\label{sec:results}
+% ============================================================
+
+Table~\ref{tab:results} consolidates the cumulative deliverable status across
+all five milestones.
+
+\begin{table}[htbp]
+  \caption{Cumulative Deliverable Status}
+  \label{tab:results}
+  \centering
+  \footnotesize
+  \begin{tabular}{llc}
+    \toprule
+    MS & Deliverable & Status \\
+    \midrule
+    1 & Hardware ROS\,2 diagnostics and validation node & \checkmark \\
+    1 & Simulation ROS\,2/Gazebo validation & \checkmark \\
+    2 & Empty-world Ackermann model launch and bridge & \checkmark \\
+    2 & OLR and keyboard teleoperation driving modes & \checkmark \\
+    2 & Arduino actuator test (motor, encoder, servo) & \checkmark \\
+    3 & Closed-loop speed and lateral control (sim) & \checkmark \\
+    3 & Tuned hardware controller with encoder feedback & \checkmark \\
+    4 & Gazebo track worlds and path planning nodes & \checkmark \\
+    4 & Hardware IMU/encoder odometry integration & \checkmark \\
+    5 & Kalman filter localization implementation & \checkmark \\
+    5 & Full hardware autonomous track navigation & \checkmark \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The vehicle successfully navigated Track~1 with accurate speed profile
+tracking and zero lateral error. On Track~2, the planner triggered
+lane-change maneuvers to avoid all three static obstacles before returning
+to the original lane. Track~3 demonstrated continuous curvature following
+using IMU heading feedback. The Kalman filter reduced the root-mean-square
+position error compared to raw odometry, with the improvement most
+pronounced during curved segments where odometry drift accumulates.
+
+The architectural separation between low-level actuation (Pico firmware)
+and high-level decision making (Raspberry Pi ROS\,2 nodes) proved robust:
+the vehicle can be developed, tuned, and tested in simulation, then deployed
+to hardware with only the serial bridge layer changing.
+
+% ============================================================
+\section{Limitations and Future Work}
+\label{sec:future}
+% ============================================================
+
+While the system demonstrated end-to-end autonomous navigation using
+predefined map knowledge and odometry-based localization, several
+capabilities remain for future development:
+
+\begin{itemize}
+  \item integrate LiDAR and camera perception for dynamic obstacle detection
+        and visual lane tracking, replacing predefined obstacle coordinates;
+  \item transition from deterministic lane-change rules to dynamic
+        Frenet-frame planning and model predictive control (MPC);
+  \item implement simultaneous localization and mapping (SLAM) to operate in
+        unmapped environments;
+  \item extend the linear Kalman filter to an extended Kalman filter (EKF)
+        or unscented Kalman filter (UKF) to better handle the nonlinear
+        Ackermann kinematics at higher speeds;
+  \item add collision monitoring and emergency stop behavior as a ROS\,2
+        lifecycle node for safety-critical deployment.
+\end{itemize}
+
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% ============================================================
+
+This paper presented the progressive development of an autonomous
+Ackermann-steered vehicle through five milestones. Starting from bare-metal
+ROS\,2 Jazzy validation on two platforms, we built a complete autonomy stack:
+simulation driving modes, closed-loop PID and Stanley control, path planning
+across structured tracks, dead-reckoning odometry with IMU and encoder fusion,
+and a discrete Kalman filter for robust state estimation. The final system
+operates headlessly on a Raspberry Pi~4 with a Pico-based actuator interface
+and successfully navigates three distinct track configurations. All source
+code, launch files, and firmware are available as an open-source
+\texttt{ament\_python} package, providing a repeatable foundation for further
+research on low-cost scaled autonomous platforms.
+
+% ============================================================
+\section*{Acknowledgment}
+% ============================================================
+
+The authors thank the MCTR~1002 Autonomous Systems teaching team at the
+German University in Cairo for their guidance and support throughout the
+project milestones.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
