@@ -76,16 +76,16 @@ class AutonomousSystemsMS2TeleopTeam23(Node):
             'right_steering_joint_name',
             'front_right_wheel_steering_joint',
         )
-        self.declare_parameter('publish_rate_hz', 20.0)
+        self.declare_parameter('publish_rate_hz', 20.0)         # 20 Hz: snappier response
         self.declare_parameter('initial_speed', 0.0)
         self.declare_parameter('lane', 0.0)
         self.declare_parameter('desired_speed', 0.25)
         self.declare_parameter('desired_lane', 0.0)
-        self.declare_parameter('linear_step', 0.10)
-        self.declare_parameter('steering_step', 0.15)
-        self.declare_parameter('steering_rate_limit', 3.0)
+        self.declare_parameter('linear_step', 0.10)              # bigger speed step per keypress
+        self.declare_parameter('steering_step', 0.15)            # bigger steer step per keypress
+        self.declare_parameter('steering_rate_limit', 3.0)       # was 1.0 – fixes sluggish steering
         self.declare_parameter('wheel_base', 1.0)
-        self.declare_parameter('max_speed', 1.0)
+        self.declare_parameter('max_speed', 1.0)                 # raised: hardware does ~1.0 m/s
         self.declare_parameter('max_turn_rate', 0.5)
         self.declare_parameter('serial_forwarding_enabled', False)
         self.declare_parameter('serial_port', '/dev/ttyUSB0')

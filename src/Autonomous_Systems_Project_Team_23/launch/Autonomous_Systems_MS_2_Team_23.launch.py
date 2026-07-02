@@ -44,11 +44,6 @@ def generate_launch_description():
     desired_lane = LaunchConfiguration('desired_lane')
     desired_steering = LaunchConfiguration('desired_steering')
     use_rqt_graph = LaunchConfiguration('use_rqt_graph')
-    serial_forwarding_enabled = LaunchConfiguration(
-        'serial_forwarding_enabled'
-    )
-    serial_port = LaunchConfiguration('serial_port')
-    serial_baudrate = LaunchConfiguration('serial_baudrate')
     teleop_terminal_prefix = LaunchConfiguration('teleop_terminal_prefix')
 
     # Shared topic / limit parameters for both driving nodes.
@@ -149,9 +144,6 @@ def generate_launch_description():
             'lane': lane,
             'desired_speed': desired_speed,
             'desired_lane': desired_lane,
-            'serial_forwarding_enabled': serial_forwarding_enabled,
-            'serial_port': serial_port,
-            'serial_baudrate': serial_baudrate,
         }],
         condition=IfCondition(
             PythonExpression(["'", control_mode, "' == 'teleop'"])
@@ -208,21 +200,6 @@ def generate_launch_description():
             'use_rqt_graph',
             default_value='true',
             description='Launch rqt_graph alongside the simulation.',
-        ),
-        DeclareLaunchArgument(
-            'serial_forwarding_enabled',
-            default_value='false',
-            description='Forward teleop commands to an Arduino serial port.',
-        ),
-        DeclareLaunchArgument(
-            'serial_port',
-            default_value='/dev/ttyUSB0',
-            description='Arduino serial port used when serial forwarding is enabled.',
-        ),
-        DeclareLaunchArgument(
-            'serial_baudrate',
-            default_value='115200',
-            description='Arduino serial baud rate.',
         ),
         DeclareLaunchArgument(
             'teleop_terminal_prefix',

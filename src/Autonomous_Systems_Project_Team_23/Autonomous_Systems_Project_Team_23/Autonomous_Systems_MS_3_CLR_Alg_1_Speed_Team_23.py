@@ -40,6 +40,7 @@ class AutonomousSystemsMS3CLRAlg1SpeedTeam23(Node):
 
         self.declare_parameter('state_topic', '/model/vehicle/odometry')
         self.declare_parameter('speed_command_topic', '/ms3/speed_command')
+        self.declare_parameter('desired_speed_topic', '/ms4/desired_speed')
         self.declare_parameter('publish_rate_hz', 20.0)
         self.declare_parameter('desired_speed', 0.25)
         self.declare_parameter('max_speed', 1.0)
@@ -52,6 +53,9 @@ class AutonomousSystemsMS3CLRAlg1SpeedTeam23(Node):
         self.state_topic = self.get_parameter('state_topic').value
         self.speed_command_topic = self.get_parameter(
             'speed_command_topic'
+        ).value
+        self.desired_speed_topic = self.get_parameter(
+            'desired_speed_topic'
         ).value
         self.publish_rate_hz = float(self.get_parameter('publish_rate_hz').value)
         self.desired_speed = float(self.get_parameter('desired_speed').value)
@@ -77,6 +81,12 @@ class AutonomousSystemsMS3CLRAlg1SpeedTeam23(Node):
             self.odom_callback,
             10,
         )
+        self.desired_speed_subscription = self.create_subscription(
+            Float64,
+            self.desired_speed_topic,
+            self.desired_speed_callback,
+            10,
+        )
 
         self.actual_speed = 0.0
         self.error_integral = 0.0
@@ -90,10 +100,11 @@ class AutonomousSystemsMS3CLRAlg1SpeedTeam23(Node):
 
         self.get_logger().info(
             'MS3 speed controller ready. state_topic=%s, speed_command_topic=%s, '
-            'desired_speed=%.2f m/s.'
+            'desired_speed_topic=%s, default_desired_speed=%.2f m/s.'
             % (
                 self.state_topic,
                 self.speed_command_topic,
+                self.desired_speed_topic,
                 self.desired_speed,
             )
         )
@@ -101,6 +112,10 @@ class AutonomousSystemsMS3CLRAlg1SpeedTeam23(Node):
     def odom_callback(self, msg):
         """Update actual speed using odometry feedback."""
         self.actual_speed = float(msg.twist.twist.linear.x)
+
+    def desired_speed_callback(self, msg):
+        """Update the desired speed setpoint from the planning node."""
+        self.desired_speed = clamp(float(msg.data), -self.max_speed, self.max_speed)
 
     def control_loop(self):
         """Run PI/PID speed control and publish commanded speed."""

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Closed-loop lateral controller node for Team 23 (Milestone 3)."""
+"""Stanley-style lateral controller node for Team 23."""
 
 import math
 
@@ -47,6 +47,14 @@ def normalize_angle(angle_rad):
     return wrapped - math.pi
 
 
+def path_normal_coordinate(x_position, y_position, path_heading):
+    """Project the vehicle position onto the path normal."""
+    return (
+        -math.sin(path_heading) * x_position
+        + math.cos(path_heading) * y_position
+    )
+
+
 def move_towards(current_value, target_value, max_delta):
     """Move *current_value* toward *target_value* by at most *max_delta*."""
     if target_value > current_value:
@@ -64,7 +72,7 @@ def steering_to_yaw_rate(speed, steering_angle, wheel_base, max_turn_rate):
 
 
 class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
-    """Compute lateral correction and publish the final Twist command."""
+    """Compute lateral correction and publish the final command."""
 
     def __init__(self):
         super().__init__('autonomous_systems_ms_3_clr_alg_2_lateral_team_23')
@@ -72,6 +80,9 @@ class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
         self.declare_parameter('command_topic', '/model/vehicle/cmd_vel')
         self.declare_parameter('state_topic', '/model/vehicle/odometry')
         self.declare_parameter('speed_command_topic', '/ms3/speed_command')
+        self.declare_parameter('desired_lane_topic', '/ms4/desired_lane')
+        self.declare_parameter('desired_heading_topic', '/ms4/desired_heading')
+        self.declare_parameter('steering_command_topic', '/ms3/steering_command')
         self.declare_parameter('publish_rate_hz', 20.0)
         self.declare_parameter('desired_lane', 0.0)
         self.declare_parameter('desired_heading', 0.0)
@@ -91,6 +102,15 @@ class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
         self.state_topic = self.get_parameter('state_topic').value
         self.speed_command_topic = self.get_parameter(
             'speed_command_topic'
+        ).value
+        self.desired_lane_topic = self.get_parameter(
+            'desired_lane_topic'
+        ).value
+        self.desired_heading_topic = self.get_parameter(
+            'desired_heading_topic'
+        ).value
+        self.steering_command_topic = self.get_parameter(
+            'steering_command_topic'
         ).value
         self.publish_rate_hz = float(self.get_parameter('publish_rate_hz').value)
         self.desired_lane = float(self.get_parameter('desired_lane').value)
@@ -120,6 +140,11 @@ class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
             self.command_topic,
             10,
         )
+        self.steering_command_publisher = self.create_publisher(
+            Float64,
+            self.steering_command_topic,
+            10,
+        )
         self.odom_subscription = self.create_subscription(
             Odometry,
             self.state_topic,
@@ -132,13 +157,26 @@ class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
             self.speed_command_callback,
             10,
         )
+        self.desired_lane_subscription = self.create_subscription(
+            Float64,
+            self.desired_lane_topic,
+            self.desired_lane_callback,
+            10,
+        )
+        self.desired_heading_subscription = self.create_subscription(
+            Float64,
+            self.desired_heading_topic,
+            self.desired_heading_callback,
+            10,
+        )
 
+        self.current_x = 0.0
         self.current_y = 0.0
         self.current_yaw = 0.0
         self.current_yaw_rate = 0.0
+        self.current_speed = 0.0
         self.current_speed_command = 0.0
         self.lateral_error_integral = 0.0
-        self.previous_lateral_error = 0.0
         self.applied_steering = 0.0
         self.last_control_time = self.get_clock().now()
         self.last_log_time = self.get_clock().now()
@@ -147,22 +185,34 @@ class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
         self.control_timer = self.create_timer(period, self.control_loop)
 
         self.get_logger().info(
-            'MS3 lateral controller ready. command_topic=%s, desired_lane=%.2f m.'
+            'MS3 lateral controller ready. command_topic=%s, desired_lane_topic=%s, '
+            'desired_heading_topic=%s.'
             % (
                 self.command_topic,
-                self.desired_lane,
+                self.desired_lane_topic,
+                self.desired_heading_topic,
             )
         )
 
     def odom_callback(self, msg):
         """Update current lateral position from odometry."""
+        self.current_x = float(msg.pose.pose.position.x)
         self.current_y = float(msg.pose.pose.position.y)
         self.current_yaw = quaternion_to_yaw(msg.pose.pose.orientation)
         self.current_yaw_rate = float(msg.twist.twist.angular.z)
+        self.current_speed = float(msg.twist.twist.linear.x)
 
     def speed_command_callback(self, msg):
         """Receive latest closed-loop speed command from the speed node."""
         self.current_speed_command = float(msg.data)
+
+    def desired_lane_callback(self, msg):
+        """Receive the planned path offset from the planning node."""
+        self.desired_lane = float(msg.data)
+
+    def desired_heading_callback(self, msg):
+        """Receive the planned path heading from the planning node."""
+        self.desired_heading = normalize_angle(float(msg.data))
 
     def control_loop(self):
         """Run lateral control and publish command to the vehicle."""
@@ -171,24 +221,28 @@ class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
         if dt <= 0.0:
             return
 
-        lateral_error = self.desired_lane - self.current_y
+        path_coordinate = path_normal_coordinate(
+            self.current_x,
+            self.current_y,
+            self.desired_heading,
+        )
+        lateral_error = self.desired_lane - path_coordinate
         self.lateral_error_integral = clamp(
             self.lateral_error_integral + lateral_error * dt,
             -self.lateral_integral_limit,
             self.lateral_integral_limit,
         )
-        lateral_derivative = (
-            lateral_error - self.previous_lateral_error
-        ) / dt
+        heading_error = normalize_angle(self.desired_heading - self.current_yaw)
+        speed_softening = max(abs(self.current_speed), max(self.lateral_kd, 0.05))
+        stanley_term = math.atan2(
+            self.lateral_kp * lateral_error,
+            speed_softening,
+        )
 
         raw_steering = (
-            self.lateral_kp * lateral_error
-            + self.lateral_ki * self.lateral_error_integral
-            + self.lateral_kd * lateral_derivative
-        )
-        heading_error = normalize_angle(self.desired_heading - self.current_yaw)
-        raw_steering += (
             self.heading_kp * heading_error
+            + stanley_term
+            + self.lateral_ki * self.lateral_error_integral
             - self.heading_kd * self.current_yaw_rate
         )
         raw_steering = clamp(
@@ -209,6 +263,11 @@ class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
             -self.max_speed,
             self.max_speed,
         )
+
+        steering_message = Float64()
+        steering_message.data = self.applied_steering
+        self.steering_command_publisher.publish(steering_message)
+
         yaw_rate = steering_to_yaw_rate(
             speed_command,
             self.applied_steering,
@@ -221,18 +280,19 @@ class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
         command.angular.z = yaw_rate
         self.command_publisher.publish(command)
 
-        self.previous_lateral_error = lateral_error
         self.last_control_time = now
 
         elapsed = (now - self.last_log_time).nanoseconds / 1_000_000_000.0
         if elapsed >= 0.5:
             self.get_logger().info(
-                'lateral | desired_lane=%.2f m, y=%.2f m, error=%.2f m, '
-                'yaw=%.2f deg, steering=%.2f rad, speed_cmd=%.2f m/s'
+                'lateral | desired_lane=%.2f m, path_coordinate=%.2f m, '
+                'error=%.2f m, desired_heading=%.2f deg, yaw=%.2f deg, '
+                'steering=%.2f rad, speed_cmd=%.2f m/s'
                 % (
                     self.desired_lane,
-                    self.current_y,
+                    path_coordinate,
                     lateral_error,
+                    math.degrees(self.desired_heading),
                     math.degrees(self.current_yaw),
                     self.applied_steering,
                     speed_command,

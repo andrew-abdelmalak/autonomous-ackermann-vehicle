@@ -18,11 +18,11 @@ RUN:
   ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23
 
   # To identify your axes first (prints raw values):
-  ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \
+  ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \\
       --ros-args -p debug_axes:=true -p serial_forwarding_enabled:=false
 
   # Full run on car:
-  ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \
+  ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \\
       --ros-args -p serial_port:=/dev/ttyUSB0
 """
 
@@ -32,36 +32,41 @@ import time
 
 import rclpy
 from rclpy.node import Node
-import struct
+from geometry_msgs.msg import Twist
 
 try:
     import serial as pyserial
     SERIAL_OK = True
 except ImportError:
-    pyserial = None
     SERIAL_OK = False
+
+try:
+    import struct
+    STRUCT_OK = True
+except ImportError:
+    STRUCT_OK = False
 
 
 # ── Linux joystick event reader ──────────────────────────────────────────
 # Format: 4-byte timestamp, 2-byte value, 1-byte type, 1-byte number
 # type: 0x01 = button, 0x02 = axis
-JS_EVENT_FMT = 'IhBB'
+JS_EVENT_FMT  = 'IhBB'
 JS_EVENT_SIZE = struct.calcsize(JS_EVENT_FMT)
 JS_TYPE_BUTTON = 0x01
-JS_TYPE_AXIS = 0x02
-JS_TYPE_INIT = 0x80  # initial state events (OR'd)
+JS_TYPE_AXIS   = 0x02
+JS_TYPE_INIT   = 0x80  # initial state events (OR'd)
 
 
 class JoystickReader:
     """Reads raw events from /dev/input/jsX in a background thread."""
 
     def __init__(self, device='/dev/input/js0'):
-        self.device = device
-        self.axes = [0.0] * 16
+        self.device  = device
+        self.axes    = [0.0] * 16
         self.buttons = [0] * 32
-        self._alive = True
-        self._fd = None
-        self._lock = threading.Lock()
+        self._alive  = True
+        self._fd     = None
+        self._lock   = threading.Lock()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
@@ -122,36 +127,40 @@ class JoyTeleopTeam23(Node):
         self.declare_parameter('serial_forwarding_enabled', True)
         self.declare_parameter('serial_port', '/dev/ttyUSB0')
         self.declare_parameter('serial_baudrate', 115200)
+        self.declare_parameter('publish_cmd_vel', True)
+        self.declare_parameter('cmd_vel_topic', '/model/vehicle/cmd_vel')
         self.declare_parameter('debug_axes', False)      # print raw values
 
         # Load params
-        joy_dev = self.get_parameter('joystick_device').value
-        self.spd_axis = self.get_parameter('speed_axis').value
-        self.str_axis = self.get_parameter('steer_axis').value
-        self.spd_inv = self.get_parameter('speed_axis_invert').value
-        self.str_inv = self.get_parameter('steer_axis_invert').value
+        joy_dev        = self.get_parameter('joystick_device').value
+        self.spd_axis  = self.get_parameter('speed_axis').value
+        self.str_axis  = self.get_parameter('steer_axis').value
+        self.spd_inv   = self.get_parameter('speed_axis_invert').value
+        self.str_inv   = self.get_parameter('steer_axis_invert').value
         self.estop_btn = self.get_parameter('estop_button').value
-        self.slow_btn = self.get_parameter('slow_button').value
-        self.fast_btn = self.get_parameter('fast_button').value
-        self.quit_btn = self.get_parameter('quit_button').value
-        self.spd_norm = self.get_parameter('max_speed_normal').value
-        self.spd_slow = self.get_parameter('max_speed_slow').value
-        self.spd_fast = self.get_parameter('max_speed_fast').value
-        self.str_max = self.get_parameter('max_turn_rate').value
-        self.deadzone = self.get_parameter('deadzone').value
-        self.smooth = self.get_parameter('speed_smoothing').value
-        serial_en = self.get_parameter('serial_forwarding_enabled').value
-        serial_port = self.get_parameter('serial_port').value
-        serial_baud = self.get_parameter('serial_baudrate').value
-        self.debug = self.get_parameter('debug_axes').value
+        self.slow_btn  = self.get_parameter('slow_button').value
+        self.fast_btn  = self.get_parameter('fast_button').value
+        self.quit_btn  = self.get_parameter('quit_button').value
+        self.spd_norm  = self.get_parameter('max_speed_normal').value
+        self.spd_slow  = self.get_parameter('max_speed_slow').value
+        self.spd_fast  = self.get_parameter('max_speed_fast').value
+        self.str_max   = self.get_parameter('max_turn_rate').value
+        self.deadzone  = self.get_parameter('deadzone').value
+        self.smooth    = self.get_parameter('speed_smoothing').value
+        serial_en      = self.get_parameter('serial_forwarding_enabled').value
+        serial_port    = self.get_parameter('serial_port').value
+        serial_baud    = self.get_parameter('serial_baudrate').value
+        publish_cmd    = self.get_parameter('publish_cmd_vel').value
+        cmd_vel_topic  = self.get_parameter('cmd_vel_topic').value
+        self.debug     = self.get_parameter('debug_axes').value
 
         # ── State ─────────────────────────────────────────────────────
-        self._estopped = False
+        self._estopped   = False
         self._smooth_spd = 0.0
-        self._running = True
+        self._running    = True
 
         # Track button edges (only trigger on press, not hold)
-        self._prev_btns = [0] * 32
+        self._prev_btns  = [0] * 32
 
         # ── Joystick ──────────────────────────────────────────────────
         self._js = None
@@ -163,7 +172,7 @@ class JoyTeleopTeam23(Node):
 
         # ── Serial ────────────────────────────────────────────────────
         self._serial = None
-        if serial_en and SERIAL_OK and pyserial is not None:
+        if serial_en and SERIAL_OK:
             try:
                 self._serial = pyserial.Serial(serial_port, serial_baud, timeout=1)
                 time.sleep(2)
@@ -174,6 +183,12 @@ class JoyTeleopTeam23(Node):
                 self.get_logger().error(f'Serial: {e}')
         elif not serial_en:
             self.get_logger().info('Serial forwarding disabled (debug mode)')
+
+        # ── Cmd_vel publisher ─────────────────────────────────────────
+        self._cmd_pub = None
+        if publish_cmd:
+            self._cmd_pub = self.create_publisher(Twist, cmd_vel_topic, 10)
+            self.get_logger().info(f'Publishing cmd_vel on {cmd_vel_topic}')
 
         # ── 20 Hz control timer ────────────────────────────────────────
         self.create_timer(0.05, self._tick)
@@ -203,7 +218,7 @@ class JoyTeleopTeam23(Node):
 
         # ── Button edge detection ─────────────────────────────────────
         def pressed(idx):
-            return (idx < len(buttons) and buttons[idx]
+            return (idx is not None and idx >= 0 and idx < len(buttons) and buttons[idx]
                     and not self._prev_btns[idx])
 
         # Quit
@@ -229,16 +244,16 @@ class JoyTeleopTeam23(Node):
             return
 
         # ── Speed limit ───────────────────────────────────────────────
-        if self.slow_btn < len(buttons) and buttons[self.slow_btn]:
+        if self.slow_btn >= 0 and self.slow_btn < len(buttons) and buttons[self.slow_btn]:
             max_spd = self.spd_slow
-        elif self.fast_btn < len(buttons) and buttons[self.fast_btn]:
+        elif self.fast_btn >= 0 and self.fast_btn < len(buttons) and buttons[self.fast_btn]:
             max_spd = self.spd_fast
         else:
             max_spd = self.spd_norm
 
         # ── Read axes ─────────────────────────────────────────────────
-        raw_spd = axes[self.spd_axis] if self.spd_axis < len(axes) else 0.0
-        raw_str = axes[self.str_axis] if self.str_axis < len(axes) else 0.0
+        raw_spd = axes[self.spd_axis] if self.spd_axis >= 0 and self.spd_axis < len(axes) else 0.0
+        raw_str = axes[self.str_axis] if self.str_axis >= 0 and self.str_axis < len(axes) else 0.0
 
         # Deadzone
         if abs(raw_spd) < self.deadzone:
@@ -254,7 +269,7 @@ class JoyTeleopTeam23(Node):
 
         # Scale
         target_spd = raw_spd * max_spd
-        cmd_str = raw_str * self.str_max
+        cmd_str    = raw_str * self.str_max
 
         # Smooth speed to avoid motor jerks
         self._smooth_spd = (self.smooth * self._smooth_spd
@@ -268,6 +283,12 @@ class JoyTeleopTeam23(Node):
             except Exception as e:
                 self.get_logger().error(f'Serial write: {e}')
 
+        if self._cmd_pub:
+            msg = Twist()
+            msg.linear.x = float(self._smooth_spd)
+            msg.angular.z = float(cmd_str)
+            self._cmd_pub.publish(msg)
+
     def _stop(self):
         self._smooth_spd = 0.0
         if self._serial and self._serial.is_open:
@@ -275,6 +296,9 @@ class JoyTeleopTeam23(Node):
                 self._serial.write(b'SPD:0.000,STR:0.000\n')
             except Exception:
                 pass
+        if self._cmd_pub:
+            msg = Twist()
+            self._cmd_pub.publish(msg)
 
     def _reader(self):
         """Print Arduino ACK/MEAS lines to logger."""
