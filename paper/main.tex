@@ -61,12 +61,12 @@ youssef.salama@student.guc.edu.eg}
 \begin{abstract}
 Many scaled-vehicle projects stop at ROS bring-up, teleoperation, or isolated
 localization experiments, leaving the full autonomy pipeline only partially
-validated. This paper presents the final integrated stack built by Team~23 for a
+validated. This paper presents the final integrated stack we built for a
 scaled Ackermann vehicle using ROS\,2 Jazzy, Gazebo Harmonic, Python planning
 and control nodes, a Raspberry Pi~4 host, and a Raspberry Pi Pico-based
 embedded actuation layer. The final system connects three structured track
-scenarios to a shared planner, a PID longitudinal controller, a Stanley-style
-lateral controller, and a linearized Kalman-filter localization node. In the
+scenarios to a shared planner, a feedforward-plus-PID longitudinal controller,
+a Stanley-style lateral controller, and a linearized Kalman-filter localization node. In the
 exported Milestone~5 simulation artifacts, with injected measurement noise of
 $0.03$~m in position, $0.04$~rad in heading, $0.05$~m/s in speed, and
 $0.08$~rad/s in yaw rate, the filter reduces position root-mean-square error
@@ -100,12 +100,12 @@ provide the middleware and simulation backbone for modular robotic systems
 practical choice for Ackermann path tracking because it combines heading and
 cross-track correction in a compact law \cite{Hoffmann2007}. Kalman-based sensor
 fusion is also well established for vehicle localization when encoder and
-inertial measurements must be combined \cite{Peiris2024,Georgiev2025}. The gap,
+inertial measurements must be combined \cite{Peiris2024,Georgiev2004}. The gap,
 however, is not algorithm availability; it is showing a single low-cost stack
 that carries shared interfaces from simulation bring-up to planning, control,
 embedded actuation, and localization demonstrations on one platform.
 
-This paper presents Team~23's final MCTR~1002 autonomous systems project as an
+This paper presents our final autonomous systems stack as an
 integrated autonomy pipeline rather than a milestone checklist. The development
 process was milestone-based, but the final contribution is the connected stack
 shown in Fig.~\ref{fig:stack_architecture}. The paper makes four project-level
@@ -145,17 +145,18 @@ that workflow by providing simulated sensors, actuators, and vehicle worlds that
 can be exercised before hardware deployment \cite{GazeboHarmonicDocs}.
 
 For Ackermann steering, the essential geometric relationship remains the shared
-instantaneous center of rotation across the steered wheels. This is commonly
+instantaneous center of rotation across the steered wheels, as analyzed for
+multi-wheeled obstacle-crossing platforms in \cite{Xu2023}. This is commonly
 approximated with the kinematic bicycle model, which is accurate enough for low-
 to moderate-speed scaled platforms and remains a useful basis for controller
-design \cite{Xu2023}. Stanley tracking is still attractive in this setting
+design. Stanley tracking is still attractive in this setting
 because heading error is handled explicitly instead of being hidden inside a
 lookahead heuristic \cite{Hoffmann2007}.
 
-Sensor fusion for small autonomous vehicles is also well established. Encoder and
-IMU fusion improves the consistency of dead-reckoning trajectories by combining
-the smooth short-term heading response of inertial sensing with the translational
-constraints implied by wheel motion \cite{Peiris2024,Georgiev2025}. The present
+Sensor fusion for mobile robots is also well established. Combining wheel
+encoders with inertial sensing via Kalman filtering improves dead-reckoning
+consistency \cite{Peiris2024}, while multi-sensor extended Kalman filtering
+mitigates drift in structured urban environments \cite{Georgiev2004}. The present
 work does not propose a new planner or estimator; it shows how these known
 components can be assembled into a coherent ROS\,2 autonomy stack and evaluated
 with honest scope boundaries.
@@ -236,10 +237,17 @@ USB serial link.
 \subsection{Vehicle Platform}
 
 The physical platform uses a Raspberry Pi~4 running Ubuntu Noble~24.04 and
-ROS\,2 Jazzy as the host computer, and a Raspberry Pi Pico RP2040 as the
-embedded controller. The Pico drives the L298N motor stage and MG995 steering
-servo, reads the quadrature encoder and MPU-6050 IMU, and exchanges commands and
-telemetry with the Pi over USB serial at 115200 baud. The final integrated
+ROS\,2 Jazzy as the host computer, paired with an embedded actuator and sensing
+controller. In Milestones~2--3, an Arduino Uno (ATmega328P) closed a 50~Hz
+feedforward-plus-proportional wheel-speed loop ($748$~ticks/rev, $3{,}663$~ticks/m).
+For Milestones~4--5, we migrated to a Raspberry Pi Pico RP2040 that drives the
+L298N motor stage and MG995 steering servo, reads the quadrature encoder
+($7{,}000$~ticks/m) and MPU-6050 IMU (300-sample startup bias calibration),
+and exchanges \texttt{SPD}/\texttt{STR} commands and
+\texttt{VEL}/\texttt{THETA}/\texttt{TICKS} telemetry with the Pi over USB serial
+at 115200~baud with a 2000~ms timeout failsafe. When commanded steering is near
+zero, the Pico engages an onboard PD heading-hold loop ($K_p = 1.5$,
+$K_d = 0.8$) using the calibrated gyro rate. The final integrated
 simulation configuration uses a hardware-scale wheelbase of $0.255$~m so that
 the Gazebo controller and planner operate on vehicle geometry closer to the
 physical chassis.
@@ -320,18 +328,19 @@ that matter most for interpreting the results.
 
 \subsection{Longitudinal and Lateral Control}
 
-The longitudinal controller is a standard discrete PID loop that tracks the
-planner's desired speed:
+The longitudinal controller is a feedforward-plus-PID loop that tracks the
+planner's desired speed $v_{\text{ref}}(t)$ with integral anti-windup
+($\pm 1.5$~m/s) and acceleration slew-rate limiting ($a_{\max} = 0.30$~m/s$^2$):
 
 \begin{equation}
-  u(t) = K_p e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d \frac{de(t)}{dt},
+  u(t) = v_{\text{ref}}(t) + K_p e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d \frac{de(t)}{dt},
   \label{eq:pid_speed}
 \end{equation}
 
-where $e(t)$ is the speed error. The lateral controller is best described as a
-Stanley-style controller rather than a textbook Stanley implementation because
-the shipped node combines heading error, a Stanley cross-track term, integral
-bias correction, and yaw-rate damping:
+where $e(t) = v_{\text{ref}}(t) - v(t)$ is the speed error. The lateral
+controller is best described as a Stanley-style controller rather than a
+textbook Stanley implementation because the shipped node combines heading error,
+a Stanley cross-track term, integral bias correction, and yaw-rate damping:
 
 \begin{equation}
   \delta = K_{\psi} e_{\psi} + \arctan\!\left(\frac{k_y e_y}{\max(|v|, v_0)}\right)
@@ -339,8 +348,10 @@ bias correction, and yaw-rate damping:
   \label{eq:stanley_style}
 \end{equation}
 
-where $e_{\psi}$ is heading error, $e_y$ is cross-track error, and $v_0$
-softens the low-speed response. This form matches the node that was ultimately
+where $e_{\psi}$ is heading error, $e_y$ is cross-track error, and
+$v_0 = \max(\texttt{lateral\_kd}, 0.05)$ ($0.10$~m/s in the MS4/MS5 launch
+configuration, with $K_I = 0.0$ in MS4/MS5 and $0.02$ in MS3) softens the
+low-speed response. This form matches the node that was ultimately
 launched in the final stack and is more precise than calling the implementation
 a pure Stanley controller.
 
@@ -352,8 +363,9 @@ On the racing track, it applies a geometry-aware lane profile that starts in the
 left lane, transitions right early enough to clear a fixed obstacle, and then
 returns left for the second obstacle. The exported racing-track evaluation uses a
 scheduled speed reduction from 0.26~m/s on straights to 0.14~m/s during lane
-changes. On the city track, the planner similarly reduces the target speed from
-0.35~m/s on straights to 0.18~m/s in the repeated-turn segments.
+changes. On the city track, the MS5 launch profile reduces the target speed from
+0.35~m/s on straights to 0.18~m/s in turns (compared with the planner node
+defaults of 0.45~m/s and 0.25~m/s used in MS4).
 
 \subsection{Kalman-Filter Localization}
 
@@ -565,7 +577,7 @@ honestly from the available material.
 \section{Conclusion}
 \label{sec:conclusion}
 
-This paper reframed Team~23's autonomous systems project as a final integrated
+This paper reframed our autonomous systems project as a final integrated
 Ackermann autonomy stack instead of a milestone chronology. The resulting system
 links ROS\,2 Jazzy, Gazebo Harmonic, shared planning and control nodes,
 Pico-based embedded actuation, and Kalman-filtered localization across straight,
