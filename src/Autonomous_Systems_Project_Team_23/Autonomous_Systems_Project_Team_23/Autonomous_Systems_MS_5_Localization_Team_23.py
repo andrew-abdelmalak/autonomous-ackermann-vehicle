@@ -17,7 +17,6 @@ import csv
 import math
 import os
 
-import matplotlib
 from nav_msgs.msg import Odometry
 import numpy
 import rclpy
@@ -386,6 +385,8 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
             writer = csv.DictWriter(csv_file, fieldnames=self.history_rows[0].keys())
             writer.writeheader()
             writer.writerows(self.history_rows)
+
+        import matplotlib
 
         matplotlib.use('Agg')
         import matplotlib.pyplot as pyplot
