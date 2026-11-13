@@ -2,10 +2,10 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>Autonomous_Systems_Project_Team_23</name>
-  <version>0.0.0</version>
-  <description>Team 23 ROS 2 package for Autonomous Systems milestones.</description>
-  <maintainer email="team23@student.guc.edu.eg">Team 23</maintainer>
-  <license>Apache-2.0</license>
+  <version>1.0.0</version>
+  <description>Planning, control, and Kalman filter localization nodes for a 1:10 scale Ackermann vehicle in ROS 2 Jazzy and Gazebo Harmonic.</description>
+  <maintainer email="127993352+andrew-abdelmalak@users.noreply.github.com">Andrew Abdelmalak</maintainer>
+  <license>MIT</license>
 
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>

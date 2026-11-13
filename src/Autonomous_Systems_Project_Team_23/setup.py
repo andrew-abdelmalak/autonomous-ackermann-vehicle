@@ -6,7 +6,7 @@ package_name = 'Autonomous_Systems_Project_Team_23'
 
 setup(
     name=package_name,
-    version='0.0.0',
+    version='1.0.0',
     packages=find_packages(exclude=['test']),
     data_files=[
         ('share/ament_index/resource_index/packages',
@@ -14,12 +14,6 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
         ('share/' + package_name + '/Worlds', glob('Worlds/*.world')),
-        ('share/' + package_name + '/Worlds/legacy_reference',
-            glob('Worlds/legacy_reference/*.world')),
-        ('share/' + package_name + '/Worlds/legacy_reference/Empty_Track',
-            glob('Worlds/legacy_reference/Empty_Track/*')),
-        ('share/' + package_name + '/Worlds/legacy_reference/Racing_Track',
-            glob('Worlds/legacy_reference/Racing_Track/*')),
         ('share/' + package_name + '/models/prius_team23', [
             'models/prius_team23/model.config',
             'models/prius_team23/model.sdf',
@@ -35,10 +29,14 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='Team 23',
-    maintainer_email='team23@student.guc.edu.eg',
-    description='Team 23 ROS 2 package for Autonomous Systems milestones.',
-    license='Apache-2.0',
+    maintainer='Andrew Abdelmalak',
+    maintainer_email='127993352+andrew-abdelmalak@users.noreply.github.com',
+    description=(
+        'Planning, control, and Kalman filter localization nodes for a '
+        '1:10 scale Ackermann vehicle in ROS 2 Jazzy and Gazebo Harmonic.'
+    ),
+    license='MIT',
+    extras_require={'test': ['pytest']},
     entry_points={
         'console_scripts': [
             'validation_node = '
