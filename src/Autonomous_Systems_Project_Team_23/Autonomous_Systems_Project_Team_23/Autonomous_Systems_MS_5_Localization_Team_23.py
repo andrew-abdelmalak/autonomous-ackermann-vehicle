@@ -1,4 +1,11 @@
-"""Milestone 5 simulation localization node for Team 23.
+# Copyright 2026 Team 23
+#
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
+
+"""
+Milestone 5 simulation localization node for Team 23.
 
 This node sits between Gazebo's ideal odometry and the existing MS3/MS4
 controller stack. It injects white Gaussian noise into the ideal state/input
@@ -11,8 +18,6 @@ import math
 import os
 
 import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as pyplot
 from nav_msgs.msg import Odometry
 import numpy
 import rclpy
@@ -29,12 +34,8 @@ def normalize_angle(angle_rad):
 
 def quaternion_to_yaw(quaternion):
     """Convert a geometry_msgs quaternion to a yaw angle in radians."""
-    siny_cosp = 2.0 * (
-        quaternion.w * quaternion.z + quaternion.x * quaternion.y
-    )
-    cosy_cosp = 1.0 - 2.0 * (
-        quaternion.y * quaternion.y + quaternion.z * quaternion.z
-    )
+    siny_cosp = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
+    cosy_cosp = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
     return math.atan2(siny_cosp, cosy_cosp)
 
 
@@ -82,48 +83,28 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
         self.declare_parameter('max_history_points', 10000)
 
         self.ideal_state_topic = self.get_parameter('ideal_state_topic').value
-        self.filtered_state_topic = self.get_parameter(
-            'filtered_state_topic'
-        ).value
+        self.filtered_state_topic = self.get_parameter('filtered_state_topic').value
         self.noisy_state_topic = self.get_parameter('noisy_state_topic').value
         self.frame_id = self.get_parameter('frame_id').value
         self.child_frame_id = self.get_parameter('child_frame_id').value
-        self.measurement_x_std = float(
-            self.get_parameter('measurement_x_std').value
-        )
-        self.measurement_y_std = float(
-            self.get_parameter('measurement_y_std').value
-        )
-        self.measurement_heading_std = float(
-            self.get_parameter('measurement_heading_std').value
-        )
-        self.measurement_speed_std = float(
-            self.get_parameter('measurement_speed_std').value
-        )
-        self.measurement_yaw_rate_std = float(
-            self.get_parameter('measurement_yaw_rate_std').value
-        )
-        self.process_speed_std = float(
-            self.get_parameter('process_speed_std').value
-        )
-        self.process_yaw_rate_std = float(
-            self.get_parameter('process_yaw_rate_std').value
-        )
+        self.measurement_x_std = float(self.get_parameter('measurement_x_std').value)
+        self.measurement_y_std = float(self.get_parameter('measurement_y_std').value)
+        self.measurement_heading_std = float(self.get_parameter('measurement_heading_std').value)
+        self.measurement_speed_std = float(self.get_parameter('measurement_speed_std').value)
+        self.measurement_yaw_rate_std = float(self.get_parameter('measurement_yaw_rate_std').value)
+        self.process_speed_std = float(self.get_parameter('process_speed_std').value)
+        self.process_yaw_rate_std = float(self.get_parameter('process_yaw_rate_std').value)
         self.initial_position_covariance = float(
             self.get_parameter('initial_position_covariance').value
         )
         self.initial_heading_covariance = float(
             self.get_parameter('initial_heading_covariance').value
         )
-        self.initial_speed_covariance = float(
-            self.get_parameter('initial_speed_covariance').value
-        )
+        self.initial_speed_covariance = float(self.get_parameter('initial_speed_covariance').value)
         self.initial_yaw_rate_covariance = float(
             self.get_parameter('initial_yaw_rate_covariance').value
         )
-        self.publish_noisy_state = bool(
-            self.get_parameter('publish_noisy_state').value
-        )
+        self.publish_noisy_state = bool(self.get_parameter('publish_noisy_state').value)
         self.save_artifacts = bool(self.get_parameter('save_artifacts').value)
         self.artifact_output_dir = self.get_parameter('artifact_output_dir').value
         self.artifact_stem = self.get_parameter('artifact_stem').value
@@ -132,20 +113,24 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
         random_seed = int(self.get_parameter('random_seed').value)
         self.random_generator = numpy.random.default_rng(random_seed)
 
-        self.measurement_covariance = numpy.diag([
-            self.measurement_x_std ** 2,
-            self.measurement_y_std ** 2,
-            self.measurement_heading_std ** 2,
-            self.measurement_speed_std ** 2,
-            self.measurement_yaw_rate_std ** 2,
-        ])
-        self.process_covariance = numpy.diag([
-            1e-8,
-            1e-8,
-            1e-8,
-            self.process_speed_std ** 2,
-            self.process_yaw_rate_std ** 2,
-        ])
+        self.measurement_covariance = numpy.diag(
+            [
+                self.measurement_x_std**2,
+                self.measurement_y_std**2,
+                self.measurement_heading_std**2,
+                self.measurement_speed_std**2,
+                self.measurement_yaw_rate_std**2,
+            ]
+        )
+        self.process_covariance = numpy.diag(
+            [
+                1e-8,
+                1e-8,
+                1e-8,
+                self.process_speed_std**2,
+                self.process_yaw_rate_std**2,
+            ]
+        )
         self.measurement_matrix = numpy.eye(5)
         self.identity_matrix = numpy.eye(5)
 
@@ -190,9 +175,7 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
         """Process the latest ideal odometry from Gazebo."""
         timestamp_sec = stamp_to_seconds(msg.header.stamp)
         if timestamp_sec <= 0.0:
-            timestamp_sec = (
-                self.get_clock().now().nanoseconds / 1_000_000_000.0
-            )
+            timestamp_sec = self.get_clock().now().nanoseconds / 1_000_000_000.0
 
         if self.start_timestamp_sec is None:
             self.start_timestamp_sec = timestamp_sec
@@ -218,13 +201,15 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
 
     def extract_state_vector(self, odom_msg):
         """Return [x, y, theta, v, omega] from an Odometry message."""
-        return numpy.array([
-            float(odom_msg.pose.pose.position.x),
-            float(odom_msg.pose.pose.position.y),
-            quaternion_to_yaw(odom_msg.pose.pose.orientation),
-            float(odom_msg.twist.twist.linear.x),
-            float(odom_msg.twist.twist.angular.z),
-        ])
+        return numpy.array(
+            [
+                float(odom_msg.pose.pose.position.x),
+                float(odom_msg.pose.pose.position.y),
+                quaternion_to_yaw(odom_msg.pose.pose.orientation),
+                float(odom_msg.twist.twist.linear.x),
+                float(odom_msg.twist.twist.angular.z),
+            ]
+        )
 
     def sample_noisy_measurement(self, ideal_state):
         """Add white Gaussian noise to the ideal state and input stream."""
@@ -241,16 +226,19 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
     def initialize_filter(self, noisy_measurement):
         """Initialize the state estimate and covariance from the first sample."""
         self.state_estimate = noisy_measurement.copy()
-        self.state_covariance = numpy.diag([
-            self.initial_position_covariance ** 2,
-            self.initial_position_covariance ** 2,
-            self.initial_heading_covariance ** 2,
-            self.initial_speed_covariance ** 2,
-            self.initial_yaw_rate_covariance ** 2,
-        ])
+        self.state_covariance = numpy.diag(
+            [
+                self.initial_position_covariance**2,
+                self.initial_position_covariance**2,
+                self.initial_heading_covariance**2,
+                self.initial_speed_covariance**2,
+                self.initial_yaw_rate_covariance**2,
+            ]
+        )
 
     def run_predict_update(self, dt, noisy_measurement):
-        """Apply a linearized discrete Kalman filter step.
+        """
+        Apply a linearized discrete Kalman filter step.
 
         The state is [x, y, theta, v, omega]. We predict forward using
         the discrete kinematic model, linearize around the current state,
@@ -258,35 +246,35 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
         """
         x_pos, y_pos, yaw_rad, speed, yaw_rate = self.state_estimate
 
-        predicted_state = numpy.array([
-            x_pos + dt * speed * math.cos(yaw_rad),
-            y_pos + dt * speed * math.sin(yaw_rad),
-            normalize_angle(yaw_rad + dt * yaw_rate),
-            speed,
-            yaw_rate,
-        ])
+        predicted_state = numpy.array(
+            [
+                x_pos + dt * speed * math.cos(yaw_rad),
+                y_pos + dt * speed * math.sin(yaw_rad),
+                normalize_angle(yaw_rad + dt * yaw_rate),
+                speed,
+                yaw_rate,
+            ]
+        )
 
-        transition_jacobian = numpy.array([
-            [1.0, 0.0, -dt * speed * math.sin(yaw_rad), dt * math.cos(yaw_rad), 0.0],
-            [0.0, 1.0, dt * speed * math.cos(yaw_rad), dt * math.sin(yaw_rad), 0.0],
-            [0.0, 0.0, 1.0, 0.0, dt],
-            [0.0, 0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 0.0, 1.0],
-        ])
+        transition_jacobian = numpy.array(
+            [
+                [1.0, 0.0, -dt * speed * math.sin(yaw_rad), dt * math.cos(yaw_rad), 0.0],
+                [0.0, 1.0, dt * speed * math.cos(yaw_rad), dt * math.sin(yaw_rad), 0.0],
+                [0.0, 0.0, 1.0, 0.0, dt],
+                [0.0, 0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 1.0],
+            ]
+        )
 
         predicted_covariance = (
-            transition_jacobian
-            @ self.state_covariance
-            @ transition_jacobian.T
+            transition_jacobian @ self.state_covariance @ transition_jacobian.T
             + self.process_covariance
         )
 
         innovation = noisy_measurement - predicted_state
         innovation[2] = normalize_angle(innovation[2])
         innovation_covariance = (
-            self.measurement_matrix
-            @ predicted_covariance
-            @ self.measurement_matrix.T
+            self.measurement_matrix @ predicted_covariance @ self.measurement_matrix.T
             + self.measurement_covariance
         )
         kalman_gain = (
@@ -334,24 +322,26 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
         if len(self.history_rows) >= self.max_history_points:
             self.history_rows.pop(0)
 
-        self.history_rows.append({
-            'time_sec': timestamp_sec - self.start_timestamp_sec,
-            'ideal_x': float(ideal_state[0]),
-            'ideal_y': float(ideal_state[1]),
-            'ideal_theta': float(ideal_state[2]),
-            'ideal_speed': float(ideal_state[3]),
-            'ideal_yaw_rate': float(ideal_state[4]),
-            'noisy_x': float(noisy_state[0]),
-            'noisy_y': float(noisy_state[1]),
-            'noisy_theta': float(noisy_state[2]),
-            'noisy_speed': float(noisy_state[3]),
-            'noisy_yaw_rate': float(noisy_state[4]),
-            'filtered_x': float(filtered_state[0]),
-            'filtered_y': float(filtered_state[1]),
-            'filtered_theta': float(filtered_state[2]),
-            'filtered_speed': float(filtered_state[3]),
-            'filtered_yaw_rate': float(filtered_state[4]),
-        })
+        self.history_rows.append(
+            {
+                'time_sec': timestamp_sec - self.start_timestamp_sec,
+                'ideal_x': float(ideal_state[0]),
+                'ideal_y': float(ideal_state[1]),
+                'ideal_theta': float(ideal_state[2]),
+                'ideal_speed': float(ideal_state[3]),
+                'ideal_yaw_rate': float(ideal_state[4]),
+                'noisy_x': float(noisy_state[0]),
+                'noisy_y': float(noisy_state[1]),
+                'noisy_theta': float(noisy_state[2]),
+                'noisy_speed': float(noisy_state[3]),
+                'noisy_yaw_rate': float(noisy_state[4]),
+                'filtered_x': float(filtered_state[0]),
+                'filtered_y': float(filtered_state[1]),
+                'filtered_theta': float(filtered_state[2]),
+                'filtered_speed': float(filtered_state[3]),
+                'filtered_yaw_rate': float(filtered_state[4]),
+            }
+        )
 
     def log_state(self, filtered_state):
         """Throttle terminal output for live validation."""
@@ -396,6 +386,9 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
             writer = csv.DictWriter(csv_file, fieldnames=self.history_rows[0].keys())
             writer.writeheader()
             writer.writerows(self.history_rows)
+
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as pyplot
 
         times = [row['time_sec'] for row in self.history_rows]
         figure, axes = pyplot.subplots(3, 2, figsize=(14, 10), sharex='col')
@@ -473,9 +466,7 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
         path_figure.savefig(path_path, dpi=150)
         pyplot.close(path_figure)
 
-        self.get_logger().info(
-            'MS5 artifacts saved to %s' % self.artifact_output_dir
-        )
+        self.get_logger().info('MS5 artifacts saved to %s' % self.artifact_output_dir)
 
     def plot_signal(
         self,
@@ -488,6 +479,7 @@ class AutonomousSystemsMS5LocalizationTeam23(Node):
         angle_plot=False,
     ):
         """Plot ideal/noisy/filtered signals on the provided axis."""
+
         def series(key):
             values = [row[key] for row in self.history_rows]
             if angle_plot:

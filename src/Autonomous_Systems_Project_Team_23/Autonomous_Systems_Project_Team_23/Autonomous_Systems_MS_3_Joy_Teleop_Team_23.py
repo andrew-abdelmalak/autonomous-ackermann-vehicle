@@ -1,28 +1,35 @@
 #!/usr/bin/env python3
-"""
-MS3 Gamepad Teleop – Team 23
-2B GP076 wireless gamepad → serial → Arduino
+# Copyright 2026 Team 23
+#
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
+
+r"""
+MS3 Gamepad Teleop - Team 23.
+
+2B GP076 wireless gamepad -> serial -> Arduino.
 
 Reads joystick directly via Linux /dev/input/js0 (no ros-jazzy-joy needed).
-Runs as a standalone ROS 2 node — no extra packages required.
+Runs as a standalone ROS 2 node with no extra packages required.
 
 DEFAULT MAPPING (2B GP076 / PS2-style pad in PC mode):
-  Left  stick  Y  (axis 1)  →  speed     (push up = forward)
-  Left  stick  X  (axis 0)  →  steering  (push right = steer right)
-  Cross / A button (btn 0)  →  EMERGENCY STOP (toggle)
-  L1 (btn 4)                →  SLOW mode  (hold: 0.25 m/s max)
-  R1 (btn 5)                →  FAST mode  (hold: 1.0  m/s max)
-  Select / Back (btn 8)     →  QUIT
+  Left  stick  Y  (axis 1)  ->  speed     (push up = forward)
+  Left  stick  X  (axis 0)  ->  steering  (push right = steer right)
+  Cross / A button (btn 0)  ->  EMERGENCY STOP (toggle)
+  L1 (btn 4)                ->  SLOW mode  (hold: 0.25 m/s max)
+  R1 (btn 5)                ->  FAST mode  (hold: 1.0  m/s max)
+  Select / Back (btn 8)     ->  QUIT
 
 RUN:
   ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23
 
   # To identify your axes first (prints raw values):
-  ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \\
+  ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \
       --ros-args -p debug_axes:=true -p serial_forwarding_enabled:=false
 
   # Full run on car:
-  ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \\
+  ros2 run Autonomous_Systems_Project_Team_23 joy_teleop_team_23 \
       --ros-args -p serial_port:=/dev/ttyUSB0
 """
 
@@ -30,18 +37,20 @@ import sys
 import threading
 import time
 
+from geometry_msgs.msg import Twist
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
 
 try:
     import serial as pyserial
+
     SERIAL_OK = True
 except ImportError:
     SERIAL_OK = False
 
 try:
     import struct
+
     STRUCT_OK = True
 except ImportError:
     STRUCT_OK = False
@@ -50,23 +59,23 @@ except ImportError:
 # ── Linux joystick event reader ──────────────────────────────────────────
 # Format: 4-byte timestamp, 2-byte value, 1-byte type, 1-byte number
 # type: 0x01 = button, 0x02 = axis
-JS_EVENT_FMT  = 'IhBB'
+JS_EVENT_FMT = 'IhBB'
 JS_EVENT_SIZE = struct.calcsize(JS_EVENT_FMT)
 JS_TYPE_BUTTON = 0x01
-JS_TYPE_AXIS   = 0x02
-JS_TYPE_INIT   = 0x80  # initial state events (OR'd)
+JS_TYPE_AXIS = 0x02
+JS_TYPE_INIT = 0x80  # initial state events (OR'd)
 
 
 class JoystickReader:
     """Reads raw events from /dev/input/jsX in a background thread."""
 
     def __init__(self, device='/dev/input/js0'):
-        self.device  = device
-        self.axes    = [0.0] * 16
+        self.device = device
+        self.axes = [0.0] * 16
         self.buttons = [0] * 32
-        self._alive  = True
-        self._fd     = None
-        self._lock   = threading.Lock()
+        self._alive = True
+        self._fd = None
+        self._lock = threading.Lock()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
@@ -104,24 +113,23 @@ class JoystickReader:
 
 # ── ROS 2 Node ──────────────────────────────────────────────────────────
 class JoyTeleopTeam23(Node):
-
     def __init__(self):
         super().__init__('joy_teleop_team_23')
 
         # ── Parameters ────────────────────────────────────────────────
         self.declare_parameter('joystick_device', '/dev/input/js0')
-        self.declare_parameter('speed_axis', 1)          # Left stick Y
-        self.declare_parameter('steer_axis', 0)          # Left stick X
+        self.declare_parameter('speed_axis', 1)  # Left stick Y
+        self.declare_parameter('steer_axis', 0)  # Left stick X
         self.declare_parameter('speed_axis_invert', True)  # fwd=negative on most pads
         self.declare_parameter('steer_axis_invert', False)
-        self.declare_parameter('estop_button', 0)        # Cross/A
-        self.declare_parameter('slow_button', 4)         # L1
-        self.declare_parameter('fast_button', 5)         # R1
-        self.declare_parameter('quit_button', 8)         # Select/Back
+        self.declare_parameter('estop_button', 0)  # Cross/A
+        self.declare_parameter('slow_button', 4)  # L1
+        self.declare_parameter('fast_button', 5)  # R1
+        self.declare_parameter('quit_button', 8)  # Select/Back
         self.declare_parameter('max_speed_normal', 0.6)  # m/s default
-        self.declare_parameter('max_speed_slow', 0.25)   # m/s with L1
-        self.declare_parameter('max_speed_fast', 1.0)    # m/s with R1
-        self.declare_parameter('max_turn_rate', 0.5)     # rad
+        self.declare_parameter('max_speed_slow', 0.25)  # m/s with L1
+        self.declare_parameter('max_speed_fast', 1.0)  # m/s with R1
+        self.declare_parameter('max_turn_rate', 0.5)  # rad
         self.declare_parameter('deadzone', 0.08)
         self.declare_parameter('speed_smoothing', 0.20)  # 0=instant
         self.declare_parameter('serial_forwarding_enabled', True)
@@ -129,38 +137,38 @@ class JoyTeleopTeam23(Node):
         self.declare_parameter('serial_baudrate', 115200)
         self.declare_parameter('publish_cmd_vel', True)
         self.declare_parameter('cmd_vel_topic', '/model/vehicle/cmd_vel')
-        self.declare_parameter('debug_axes', False)      # print raw values
+        self.declare_parameter('debug_axes', False)  # print raw values
 
         # Load params
-        joy_dev        = self.get_parameter('joystick_device').value
-        self.spd_axis  = self.get_parameter('speed_axis').value
-        self.str_axis  = self.get_parameter('steer_axis').value
-        self.spd_inv   = self.get_parameter('speed_axis_invert').value
-        self.str_inv   = self.get_parameter('steer_axis_invert').value
+        joy_dev = self.get_parameter('joystick_device').value
+        self.spd_axis = self.get_parameter('speed_axis').value
+        self.str_axis = self.get_parameter('steer_axis').value
+        self.spd_inv = self.get_parameter('speed_axis_invert').value
+        self.str_inv = self.get_parameter('steer_axis_invert').value
         self.estop_btn = self.get_parameter('estop_button').value
-        self.slow_btn  = self.get_parameter('slow_button').value
-        self.fast_btn  = self.get_parameter('fast_button').value
-        self.quit_btn  = self.get_parameter('quit_button').value
-        self.spd_norm  = self.get_parameter('max_speed_normal').value
-        self.spd_slow  = self.get_parameter('max_speed_slow').value
-        self.spd_fast  = self.get_parameter('max_speed_fast').value
-        self.str_max   = self.get_parameter('max_turn_rate').value
-        self.deadzone  = self.get_parameter('deadzone').value
-        self.smooth    = self.get_parameter('speed_smoothing').value
-        serial_en      = self.get_parameter('serial_forwarding_enabled').value
-        serial_port    = self.get_parameter('serial_port').value
-        serial_baud    = self.get_parameter('serial_baudrate').value
-        publish_cmd    = self.get_parameter('publish_cmd_vel').value
-        cmd_vel_topic  = self.get_parameter('cmd_vel_topic').value
-        self.debug     = self.get_parameter('debug_axes').value
+        self.slow_btn = self.get_parameter('slow_button').value
+        self.fast_btn = self.get_parameter('fast_button').value
+        self.quit_btn = self.get_parameter('quit_button').value
+        self.spd_norm = self.get_parameter('max_speed_normal').value
+        self.spd_slow = self.get_parameter('max_speed_slow').value
+        self.spd_fast = self.get_parameter('max_speed_fast').value
+        self.str_max = self.get_parameter('max_turn_rate').value
+        self.deadzone = self.get_parameter('deadzone').value
+        self.smooth = self.get_parameter('speed_smoothing').value
+        serial_en = self.get_parameter('serial_forwarding_enabled').value
+        serial_port = self.get_parameter('serial_port').value
+        serial_baud = self.get_parameter('serial_baudrate').value
+        publish_cmd = self.get_parameter('publish_cmd_vel').value
+        cmd_vel_topic = self.get_parameter('cmd_vel_topic').value
+        self.debug = self.get_parameter('debug_axes').value
 
         # ── State ─────────────────────────────────────────────────────
-        self._estopped   = False
+        self._estopped = False
         self._smooth_spd = 0.0
-        self._running    = True
+        self._running = True
 
         # Track button edges (only trigger on press, not hold)
-        self._prev_btns  = [0] * 32
+        self._prev_btns = [0] * 32
 
         # ── Joystick ──────────────────────────────────────────────────
         self._js = None
@@ -196,12 +204,14 @@ class JoyTeleopTeam23(Node):
         self.get_logger().info(
             f'Joy Teleop ready | speed_axis={self.spd_axis} '
             f'steer_axis={self.str_axis} | '
-            f'normal={self.spd_norm} slow={self.spd_slow} fast={self.spd_fast} m/s')
-        self.get_logger().info(
-            'Cross/A=ESTOP  L1=slow  R1=fast  Select=quit')
+            f'normal={self.spd_norm} slow={self.spd_slow} fast={self.spd_fast} m/s'
+        )
+        self.get_logger().info('Cross/A=ESTOP  L1=slow  R1=fast  Select=quit')
         if self.debug:
             self.get_logger().warn(
-                'DEBUG MODE: raw axes will print. Identify your axes then remove -p debug_axes:=true')
+                'DEBUG MODE: raw axes will print. '
+                'Identify your axes then remove -p debug_axes:=true'
+            )
 
     # ── 20 Hz tick ───────────────────────────────────────────────────
     def _tick(self):
@@ -218,8 +228,13 @@ class JoyTeleopTeam23(Node):
 
         # ── Button edge detection ─────────────────────────────────────
         def pressed(idx):
-            return (idx is not None and idx >= 0 and idx < len(buttons) and buttons[idx]
-                    and not self._prev_btns[idx])
+            return (
+                idx is not None
+                and idx >= 0
+                and idx < len(buttons)
+                and buttons[idx]
+                and not self._prev_btns[idx]
+            )
 
         # Quit
         if pressed(self.quit_btn):
@@ -269,11 +284,10 @@ class JoyTeleopTeam23(Node):
 
         # Scale
         target_spd = raw_spd * max_spd
-        cmd_str    = raw_str * self.str_max
+        cmd_str = raw_str * self.str_max
 
         # Smooth speed to avoid motor jerks
-        self._smooth_spd = (self.smooth * self._smooth_spd
-                            + (1.0 - self.smooth) * target_spd)
+        self._smooth_spd = self.smooth * self._smooth_spd + (1.0 - self.smooth) * target_spd
 
         # ── Send serial ───────────────────────────────────────────────
         cmd = f'SPD:{self._smooth_spd:.3f},STR:{cmd_str:.3f}\n'

@@ -1,8 +1,14 @@
+# Copyright 2026 Team 23
+#
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
+
 """Gazebo contact monitor for the Team 23 simulation vehicle."""
 
-from ros_gz_interfaces.msg import Contacts
 import rclpy
 from rclpy.node import Node
+from ros_gz_interfaces.msg import Contacts
 
 
 class AutonomousSystemsMS4CollisionMonitorTeam23(Node):
@@ -26,9 +32,7 @@ class AutonomousSystemsMS4CollisionMonitorTeam23(Node):
         self.ignore_name_tokens = [
             token.lower() for token in self.get_parameter('ignore_name_tokens').value
         ]
-        self.latch_first_collision = bool(
-            self.get_parameter('latch_first_collision').value
-        )
+        self.latch_first_collision = bool(self.get_parameter('latch_first_collision').value)
         self.first_collision_reported = False
 
         for topic in self.contact_topics:
@@ -43,8 +47,7 @@ class AutonomousSystemsMS4CollisionMonitorTeam23(Node):
             )
 
         self.get_logger().info(
-            'MS4 collision monitor ready for %d contact topics.'
-            % len(self.contact_topics)
+            'MS4 collision monitor ready for %d contact topics.' % len(self.contact_topics)
         )
 
     def contacts_callback(self, topic_name, message):
@@ -67,8 +70,7 @@ class AutonomousSystemsMS4CollisionMonitorTeam23(Node):
 
             self.first_collision_reported = True
             self.get_logger().error(
-                'COLLISION DETECTED on %s between %s and %s'
-                % (topic_name, name_1, name_2)
+                'COLLISION DETECTED on %s between %s and %s' % (topic_name, name_1, name_2)
             )
             return
 

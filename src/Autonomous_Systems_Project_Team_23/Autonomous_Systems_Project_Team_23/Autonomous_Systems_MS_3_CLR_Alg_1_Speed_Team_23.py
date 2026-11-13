@@ -1,16 +1,8 @@
 # Copyright 2026 Team 23
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 """Closed-loop speed controller node for Team 23 (Milestone 3)."""
 
@@ -51,24 +43,16 @@ class AutonomousSystemsMS3CLRAlg1SpeedTeam23(Node):
         self.declare_parameter('speed_integral_limit', 1.5)
 
         self.state_topic = self.get_parameter('state_topic').value
-        self.speed_command_topic = self.get_parameter(
-            'speed_command_topic'
-        ).value
-        self.desired_speed_topic = self.get_parameter(
-            'desired_speed_topic'
-        ).value
+        self.speed_command_topic = self.get_parameter('speed_command_topic').value
+        self.desired_speed_topic = self.get_parameter('desired_speed_topic').value
         self.publish_rate_hz = float(self.get_parameter('publish_rate_hz').value)
         self.desired_speed = float(self.get_parameter('desired_speed').value)
         self.max_speed = float(self.get_parameter('max_speed').value)
-        self.max_acceleration = float(
-            self.get_parameter('max_acceleration').value
-        )
+        self.max_acceleration = float(self.get_parameter('max_acceleration').value)
         self.speed_kp = float(self.get_parameter('speed_kp').value)
         self.speed_ki = float(self.get_parameter('speed_ki').value)
         self.speed_kd = float(self.get_parameter('speed_kd').value)
-        self.speed_integral_limit = float(
-            self.get_parameter('speed_integral_limit').value
-        )
+        self.speed_integral_limit = float(self.get_parameter('speed_integral_limit').value)
 
         self.speed_command_publisher = self.create_publisher(
             Float64,

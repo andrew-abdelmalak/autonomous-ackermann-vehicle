@@ -1,16 +1,8 @@
 # Copyright 2026 Team 23
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 """Teleoperation driving node for Team 23 (Milestone 2)."""
 
@@ -34,12 +26,8 @@ def clamp(value, min_value, max_value):
 
 def quaternion_to_yaw(quaternion):
     """Convert a quaternion to a yaw angle in radians."""
-    siny_cosp = 2.0 * (
-        quaternion.w * quaternion.z + quaternion.x * quaternion.y
-    )
-    cosy_cosp = 1.0 - 2.0 * (
-        quaternion.y * quaternion.y + quaternion.z * quaternion.z
-    )
+    siny_cosp = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
+    cosy_cosp = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
     return math.atan2(siny_cosp, cosy_cosp)
 
 
@@ -76,16 +64,16 @@ class AutonomousSystemsMS2TeleopTeam23(Node):
             'right_steering_joint_name',
             'front_right_wheel_steering_joint',
         )
-        self.declare_parameter('publish_rate_hz', 20.0)         # 20 Hz: snappier response
+        self.declare_parameter('publish_rate_hz', 20.0)  # 20 Hz: snappier response
         self.declare_parameter('initial_speed', 0.0)
         self.declare_parameter('lane', 0.0)
         self.declare_parameter('desired_speed', 0.25)
         self.declare_parameter('desired_lane', 0.0)
-        self.declare_parameter('linear_step', 0.10)              # bigger speed step per keypress
-        self.declare_parameter('steering_step', 0.15)            # bigger steer step per keypress
-        self.declare_parameter('steering_rate_limit', 3.0)       # was 1.0 – fixes sluggish steering
+        self.declare_parameter('linear_step', 0.10)  # bigger speed step per keypress
+        self.declare_parameter('steering_step', 0.15)  # bigger steer step per keypress
+        self.declare_parameter('steering_rate_limit', 3.0)  # was 1.0 – fixes sluggish steering
         self.declare_parameter('wheel_base', 1.0)
-        self.declare_parameter('max_speed', 1.0)                 # raised: hardware does ~1.0 m/s
+        self.declare_parameter('max_speed', 1.0)  # raised: hardware does ~1.0 m/s
         self.declare_parameter('max_turn_rate', 0.5)
         self.declare_parameter('serial_forwarding_enabled', False)
         self.declare_parameter('serial_port', '/dev/ttyUSB0')
@@ -94,18 +82,12 @@ class AutonomousSystemsMS2TeleopTeam23(Node):
         self.command_topic = self.get_parameter('command_topic').value
         self.state_topic = self.get_parameter('state_topic').value
         self.joint_state_topic = self.get_parameter('joint_state_topic').value
-        self.left_steering_joint_name = self.get_parameter(
-            'left_steering_joint_name'
-        ).value
-        self.right_steering_joint_name = self.get_parameter(
-            'right_steering_joint_name'
-        ).value
+        self.left_steering_joint_name = self.get_parameter('left_steering_joint_name').value
+        self.right_steering_joint_name = self.get_parameter('right_steering_joint_name').value
         self.publish_rate_hz = float(self.get_parameter('publish_rate_hz').value)
         self.linear_step = float(self.get_parameter('linear_step').value)
         self.steering_step = float(self.get_parameter('steering_step').value)
-        self.steering_rate_limit = float(
-            self.get_parameter('steering_rate_limit').value
-        )
+        self.steering_rate_limit = float(self.get_parameter('steering_rate_limit').value)
         self.wheel_base = float(self.get_parameter('wheel_base').value)
         self.max_speed = float(self.get_parameter('max_speed').value)
         self.max_turn_rate = float(self.get_parameter('max_turn_rate').value)
@@ -201,8 +183,7 @@ class AutonomousSystemsMS2TeleopTeam23(Node):
             )
         except Exception as exc:
             self.get_logger().warning(
-                'Could not open serial port %s: %s'
-                % (self.serial_port, exc)
+                'Could not open serial port %s: %s' % (self.serial_port, exc)
             )
 
     def control_loop(self):
@@ -238,7 +219,7 @@ class AutonomousSystemsMS2TeleopTeam23(Node):
 
     def joint_state_callback(self, msg):
         """Update the averaged steering angle from joint states."""
-        joint_positions = dict(zip(msg.name, msg.position))
+        joint_positions = dict(zip(msg.name, msg.position, strict=False))
         steering_values = []
 
         if self.left_steering_joint_name in joint_positions:
@@ -315,10 +296,7 @@ class AutonomousSystemsMS2TeleopTeam23(Node):
         if self.serial_connection is None:
             return
 
-        payload = 'SPD:{:.3f},STR:{:.3f}\n'.format(
-            speed,
-            steering_angle,
-        )
+        payload = f'SPD:{speed:.3f},STR:{steering_angle:.3f}\n'
         try:
             self.serial_connection.write(payload.encode('ascii'))
         except Exception as exc:
@@ -328,9 +306,7 @@ class AutonomousSystemsMS2TeleopTeam23(Node):
     def odom_callback(self, msg):
         """Log vehicle state at a throttled rate."""
         now = self.get_clock().now()
-        elapsed_since_log = (
-            now - self.last_state_log_time
-        ).nanoseconds / 1_000_000_000.0
+        elapsed_since_log = (now - self.last_state_log_time).nanoseconds / 1_000_000_000.0
         if elapsed_since_log < 0.5:
             return
 

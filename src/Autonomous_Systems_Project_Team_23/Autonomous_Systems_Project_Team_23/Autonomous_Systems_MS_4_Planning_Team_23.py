@@ -1,3 +1,9 @@
+# Copyright 2026 Team 23
+#
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
+
 """Milestone 4 planning node for Team 23."""
 
 import bisect
@@ -14,12 +20,8 @@ from std_msgs.msg import Float64
 
 def quaternion_to_yaw(quaternion):
     """Convert a quaternion to a yaw angle in radians."""
-    siny_cosp = 2.0 * (
-        quaternion.w * quaternion.z + quaternion.x * quaternion.y
-    )
-    cosy_cosp = 1.0 - 2.0 * (
-        quaternion.y * quaternion.y + quaternion.z * quaternion.z
-    )
+    siny_cosp = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
+    cosy_cosp = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
     return math.atan2(siny_cosp, cosy_cosp)
 
 
@@ -40,7 +42,7 @@ def smoothstep(progress):
 
 
 def smoothstep_derivative(progress):
-    """Derivative of smoothstep for heading continuity."""
+    """Compute derivative of smoothstep for heading continuity."""
     progress = clamp(progress, 0.0, 1.0)
     return 6.0 * progress * (1.0 - progress)
 
@@ -48,29 +50,18 @@ def smoothstep_derivative(progress):
 def quintic_blend(progress):
     """5th-order blend with zero slope and curvature at both ends."""
     progress = clamp(progress, 0.0, 1.0)
-    return (
-        10.0 * progress ** 3
-        - 15.0 * progress ** 4
-        + 6.0 * progress ** 5
-    )
+    return 10.0 * progress**3 - 15.0 * progress**4 + 6.0 * progress**5
 
 
 def quintic_blend_derivative(progress):
-    """Derivative of :func:`quintic_blend` with respect to progress."""
+    """Compute derivative of :func:`quintic_blend` with respect to progress."""
     progress = clamp(progress, 0.0, 1.0)
-    return (
-        30.0 * progress ** 2
-        - 60.0 * progress ** 3
-        + 30.0 * progress ** 4
-    )
+    return 30.0 * progress**2 - 60.0 * progress**3 + 30.0 * progress**4
 
 
 def path_normal_coordinate(x_position, y_position, path_heading):
     """Project a position onto the path normal for a given heading."""
-    return (
-        -math.sin(path_heading) * x_position
-        + math.cos(path_heading) * y_position
-    )
+    return -math.sin(path_heading) * x_position + math.cos(path_heading) * y_position
 
 
 def _safe_float(text):
@@ -200,52 +191,34 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
         self.declare_parameter('centerline_overwrite', False)
 
         self.state_topic = self.get_parameter('state_topic').value
-        self.desired_speed_topic = self.get_parameter(
-            'desired_speed_topic'
-        ).value
+        self.desired_speed_topic = self.get_parameter('desired_speed_topic').value
         self.desired_lane_topic = self.get_parameter('desired_lane_topic').value
-        self.desired_heading_topic = self.get_parameter(
-            'desired_heading_topic'
-        ).value
+        self.desired_heading_topic = self.get_parameter('desired_heading_topic').value
         self.publish_rate_hz = float(self.get_parameter('publish_rate_hz').value)
         self.planner_track_mode = normalize_track_mode(
             self.get_parameter('planner_track_mode').value
         )
-        self.startup_settle_samples = int(
-            self.get_parameter('startup_settle_samples').value
-        )
+        self.startup_settle_samples = int(self.get_parameter('startup_settle_samples').value)
         self.startup_max_position_jump = float(
             self.get_parameter('startup_max_position_jump').value
         )
         self.startup_max_heading_jump_deg = float(
             self.get_parameter('startup_max_heading_jump_deg').value
         )
-        self.startup_log_wait_seconds = float(
-            self.get_parameter('startup_log_wait_seconds').value
-        )
+        self.startup_log_wait_seconds = float(self.get_parameter('startup_log_wait_seconds').value)
 
-        self.empty_track_speed = float(
-            self.get_parameter('empty_track_speed').value
-        )
-        self.empty_track_align_speed = float(
-            self.get_parameter('empty_track_align_speed').value
-        )
+        self.empty_track_speed = float(self.get_parameter('empty_track_speed').value)
+        self.empty_track_align_speed = float(self.get_parameter('empty_track_align_speed').value)
         self.empty_track_lane = float(self.get_parameter('empty_track_lane').value)
-        self.empty_track_lane_second = float(
-            self.get_parameter('empty_track_lane_second').value
-        )
+        self.empty_track_lane_second = float(self.get_parameter('empty_track_lane_second').value)
         self.empty_track_lane_second_start = float(
             self.get_parameter('empty_track_lane_second_start').value
         )
         self.empty_track_lane_second_transition_distance = float(
             self.get_parameter('empty_track_lane_second_transition_distance').value
         )
-        self.empty_track_heading = float(
-            self.get_parameter('empty_track_heading').value
-        )
-        self.empty_track_length = float(
-            self.get_parameter('empty_track_length').value
-        )
+        self.empty_track_heading = float(self.get_parameter('empty_track_heading').value)
+        self.empty_track_length = float(self.get_parameter('empty_track_length').value)
         self.empty_track_lane_transition_distance = float(
             self.get_parameter('empty_track_lane_transition_distance').value
         )
@@ -255,9 +228,7 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
         self.empty_track_vehicle_width = float(
             self.get_parameter('empty_track_vehicle_width').value
         )
-        self.empty_track_wall_margin = float(
-            self.get_parameter('empty_track_wall_margin').value
-        )
+        self.empty_track_wall_margin = float(self.get_parameter('empty_track_wall_margin').value)
         self.empty_track_align_lateral_tolerance = float(
             self.get_parameter('empty_track_align_lateral_tolerance').value
         )
@@ -268,21 +239,11 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
             self.get_parameter('empty_track_stop_position_tolerance').value
         )
 
-        self.racing_track_length = float(
-            self.get_parameter('racing_track_length').value
-        )
-        self.racing_lane_left = float(
-            self.get_parameter('racing_lane_left').value
-        )
-        self.racing_lane_right = float(
-            self.get_parameter('racing_lane_right').value
-        )
-        self.racing_obstacle_1_x = float(
-            self.get_parameter('racing_obstacle_1_x').value
-        )
-        self.racing_obstacle_2_x = float(
-            self.get_parameter('racing_obstacle_2_x').value
-        )
+        self.racing_track_length = float(self.get_parameter('racing_track_length').value)
+        self.racing_lane_left = float(self.get_parameter('racing_lane_left').value)
+        self.racing_lane_right = float(self.get_parameter('racing_lane_right').value)
+        self.racing_obstacle_1_x = float(self.get_parameter('racing_obstacle_1_x').value)
+        self.racing_obstacle_2_x = float(self.get_parameter('racing_obstacle_2_x').value)
         self.racing_lane_change_buffer = float(
             self.get_parameter('racing_lane_change_buffer').value
         )
@@ -292,55 +253,27 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
         self.racing_lane_settle_tolerance = float(
             self.get_parameter('racing_lane_settle_tolerance').value
         )
-        self.racing_straight_speed = float(
-            self.get_parameter('racing_straight_speed').value
-        )
-        self.racing_lane_change_speed = float(
-            self.get_parameter('racing_lane_change_speed').value
-        )
-        self.racing_vehicle_length = float(
-            self.get_parameter('racing_vehicle_length').value
-        )
-        self.racing_vehicle_width = float(
-            self.get_parameter('racing_vehicle_width').value
-        )
-        self.racing_wall_margin = float(
-            self.get_parameter('racing_wall_margin').value
-        )
+        self.racing_straight_speed = float(self.get_parameter('racing_straight_speed').value)
+        self.racing_lane_change_speed = float(self.get_parameter('racing_lane_change_speed').value)
+        self.racing_vehicle_length = float(self.get_parameter('racing_vehicle_length').value)
+        self.racing_vehicle_width = float(self.get_parameter('racing_vehicle_width').value)
+        self.racing_wall_margin = float(self.get_parameter('racing_wall_margin').value)
         self.racing_obstacle_longitudinal_margin = float(
             self.get_parameter('racing_obstacle_longitudinal_margin').value
         )
-        self.racing_lookahead = float(
-            self.get_parameter('racing_lookahead').value
-        )
-        self.racing_path_resolution = float(
-            self.get_parameter('racing_path_resolution').value
-        )
-        self.racing_search_window = int(
-            self.get_parameter('racing_search_window').value
-        )
-        self.racing_world_file = str(
-            self.get_parameter('racing_world_file').value
-        )
-        self.racing_clearance = float(
-            self.get_parameter('racing_clearance').value
-        )
-        self.racing_heading_threshold = float(
-            self.get_parameter('racing_heading_threshold').value
-        )
+        self.racing_lookahead = float(self.get_parameter('racing_lookahead').value)
+        self.racing_path_resolution = float(self.get_parameter('racing_path_resolution').value)
+        self.racing_search_window = int(self.get_parameter('racing_search_window').value)
+        self.racing_world_file = str(self.get_parameter('racing_world_file').value)
+        self.racing_clearance = float(self.get_parameter('racing_clearance').value)
+        self.racing_heading_threshold = float(self.get_parameter('racing_heading_threshold').value)
 
         self.racing_override_lane_profile = bool(
             self.get_parameter('racing_override_lane_profile').value
         )
-        self.racing_profile_lane_1 = float(
-            self.get_parameter('racing_profile_lane_1').value
-        )
-        self.racing_profile_lane_2 = float(
-            self.get_parameter('racing_profile_lane_2').value
-        )
-        self.racing_profile_lane_3 = float(
-            self.get_parameter('racing_profile_lane_3').value
-        )
+        self.racing_profile_lane_1 = float(self.get_parameter('racing_profile_lane_1').value)
+        self.racing_profile_lane_2 = float(self.get_parameter('racing_profile_lane_2').value)
+        self.racing_profile_lane_3 = float(self.get_parameter('racing_profile_lane_3').value)
         self.racing_profile_switch_1_start = float(
             self.get_parameter('racing_profile_switch_1_start').value
         )
@@ -358,45 +291,21 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
         self.city_max_x = float(self.get_parameter('city_max_x').value)
         self.city_min_y = float(self.get_parameter('city_min_y').value)
         self.city_max_y = float(self.get_parameter('city_max_y').value)
-        self.city_corner_margin = float(
-            self.get_parameter('city_corner_margin').value
-        )
-        self.city_straight_speed = float(
-            self.get_parameter('city_straight_speed').value
-        )
-        self.city_turn_speed = float(
-            self.get_parameter('city_turn_speed').value
-        )
-        self.city_corner_radius = float(
-            self.get_parameter('city_corner_radius').value
-        )
-        self.city_lookahead = float(
-            self.get_parameter('city_lookahead').value
-        )
+        self.city_corner_margin = float(self.get_parameter('city_corner_margin').value)
+        self.city_straight_speed = float(self.get_parameter('city_straight_speed').value)
+        self.city_turn_speed = float(self.get_parameter('city_turn_speed').value)
+        self.city_corner_radius = float(self.get_parameter('city_corner_radius').value)
+        self.city_lookahead = float(self.get_parameter('city_lookahead').value)
         self.city_speed_blend_distance = float(
             self.get_parameter('city_speed_blend_distance').value
         )
-        self.city_path_resolution = float(
-            self.get_parameter('city_path_resolution').value
-        )
-        self.city_search_window = int(
-            self.get_parameter('city_search_window').value
-        )
-        self.city_world_file = str(
-            self.get_parameter('city_world_file').value
-        )
-        self.city_curvature_threshold = float(
-            self.get_parameter('city_curvature_threshold').value
-        )
-        self.save_centerline = bool(
-            self.get_parameter('save_centerline').value
-        )
-        self.centerline_output_dir = str(
-            self.get_parameter('centerline_output_dir').value
-        )
-        self.centerline_overwrite = bool(
-            self.get_parameter('centerline_overwrite').value
-        )
+        self.city_path_resolution = float(self.get_parameter('city_path_resolution').value)
+        self.city_search_window = int(self.get_parameter('city_search_window').value)
+        self.city_world_file = str(self.get_parameter('city_world_file').value)
+        self.city_curvature_threshold = float(self.get_parameter('city_curvature_threshold').value)
+        self.save_centerline = bool(self.get_parameter('save_centerline').value)
+        self.centerline_output_dir = str(self.get_parameter('centerline_output_dir').value)
+        self.centerline_overwrite = bool(self.get_parameter('centerline_overwrite').value)
 
         self.speed_publisher = self.create_publisher(
             Float64,
@@ -487,9 +396,7 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
             dx = x_pos - self.previous_odom_x
             dy = y_pos - self.previous_odom_y
             distance = math.hypot(dx, dy)
-            yaw_jump_deg = abs(
-                math.degrees(normalize_angle(yaw_rad - self.previous_odom_yaw))
-            )
+            yaw_jump_deg = abs(math.degrees(normalize_angle(yaw_rad - self.previous_odom_yaw)))
             if (
                 distance <= self.startup_max_position_jump
                 and yaw_jump_deg <= self.startup_max_heading_jump_deg
@@ -583,9 +490,7 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
         self.heading_publisher.publish(heading_message)
 
         now = self.get_clock().now()
-        elapsed = (
-            now - self.startup_last_wait_log_time
-        ).nanoseconds / 1_000_000_000.0
+        elapsed = (now - self.startup_last_wait_log_time).nanoseconds / 1_000_000_000.0
         if elapsed >= self.startup_log_wait_seconds:
             self.get_logger().info(
                 'planner | waiting_for_valid_pose, stable_samples=%d/%d, '
@@ -802,14 +707,16 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
                 dy = math.sin(yaw) * half_length
                 start = (x_pos - dx, y_pos - dy)
                 end = (x_pos + dx, y_pos + dy)
-                segments.append({
-                    'name': full_name,
-                    'start': start,
-                    'end': end,
-                    'center': (x_pos, y_pos),
-                    'length': length,
-                    'width': width,
-                })
+                segments.append(
+                    {
+                        'name': full_name,
+                        'start': start,
+                        'end': end,
+                        'center': (x_pos, y_pos),
+                        'length': length,
+                        'width': width,
+                    }
+                )
         return segments
 
     def _split_walls_by_orientation(self, segments):
@@ -848,14 +755,22 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
         left_outer = vertical[0]
         left_inner = vertical[1]
 
-        top_y = 0.5 * ((top_outer['start'][1] + top_outer['end'][1]) * 0.5
-                       + (top_inner['start'][1] + top_inner['end'][1]) * 0.5)
-        bottom_y = 0.5 * ((bottom_outer['start'][1] + bottom_outer['end'][1]) * 0.5
-                          + (bottom_inner['start'][1] + bottom_inner['end'][1]) * 0.5)
-        left_x = 0.5 * ((left_outer['start'][0] + left_outer['end'][0]) * 0.5
-                        + (left_inner['start'][0] + left_inner['end'][0]) * 0.5)
-        right_x = 0.5 * ((right_outer['start'][0] + right_outer['end'][0]) * 0.5
-                         + (right_inner['start'][0] + right_inner['end'][0]) * 0.5)
+        top_y = 0.5 * (
+            (top_outer['start'][1] + top_outer['end'][1]) * 0.5
+            + (top_inner['start'][1] + top_inner['end'][1]) * 0.5
+        )
+        bottom_y = 0.5 * (
+            (bottom_outer['start'][1] + bottom_outer['end'][1]) * 0.5
+            + (bottom_inner['start'][1] + bottom_inner['end'][1]) * 0.5
+        )
+        left_x = 0.5 * (
+            (left_outer['start'][0] + left_outer['end'][0]) * 0.5
+            + (left_inner['start'][0] + left_inner['end'][0]) * 0.5
+        )
+        right_x = 0.5 * (
+            (right_outer['start'][0] + right_outer['end'][0]) * 0.5
+            + (right_inner['start'][0] + right_inner['end'][0]) * 0.5
+        )
 
         top_outer_width = abs(top_outer['start'][1] - top_inner['start'][1])
         right_outer_width = abs(right_outer['start'][0] - right_inner['start'][0])
@@ -899,13 +814,15 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
                 center_y = 0.5 * (seg['start'][1] + seg['end'][1])
                 half_length = 0.5 * abs(seg['end'][0] - seg['start'][0])
                 blocked_side = 'left' if center_y >= track_center_y else 'right'
-                obstacle_entries.append({
-                    'x': center_x,
-                    'y': center_y,
-                    'half_length': half_length,
-                    'half_width': 0.5 * min(seg['length'], seg['width']),
-                    'blocked_side': blocked_side,
-                })
+                obstacle_entries.append(
+                    {
+                        'x': center_x,
+                        'y': center_y,
+                        'half_length': half_length,
+                        'half_width': 0.5 * min(seg['length'], seg['width']),
+                        'blocked_side': blocked_side,
+                    }
+                )
 
             obstacle_entries.sort(key=lambda item: item['x'])
             self.racing_obstacles = obstacle_entries
@@ -915,9 +832,7 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
                 self.racing_obstacle_2_x = obstacle_entries[1]['x']
 
         max_lane_offset = (
-            0.5 * track_width
-            - 0.5 * self.racing_vehicle_width
-            - self.racing_wall_margin
+            0.5 * track_width - 0.5 * self.racing_vehicle_width - self.racing_wall_margin
         )
         desired_lane_offset = min(half_lane, max(max_lane_offset, 0.0))
         if self.racing_obstacles:
@@ -927,12 +842,8 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
             for obstacle in self.racing_obstacles:
                 obstacle_offset = abs(obstacle['y'] - track_center_y)
                 obstacle_half_width = obstacle['half_width']
-                left_offset = 0.5 * (
-                    top_available - obstacle_offset + obstacle_half_width
-                )
-                right_offset = 0.5 * (
-                    bottom_available - obstacle_offset + obstacle_half_width
-                )
+                left_offset = 0.5 * (top_available - obstacle_offset + obstacle_half_width)
+                right_offset = 0.5 * (bottom_available - obstacle_offset + obstacle_half_width)
                 limiting_offsets.extend([left_offset, right_offset])
             desired_lane_offset = min(
                 desired_lane_offset,
@@ -944,7 +855,8 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
         return True
 
     def _build_racing_lane_plan(self):
-        """Create a geometry-aware lane plan from parsed obstacles.
+        """
+        Create a geometry-aware lane plan from parsed obstacles.
 
         The vehicle starts in the left lane. If an obstacle blocks the current lane,
         transition to the opposite lane early enough that the full vehicle body clears
@@ -966,9 +878,7 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
             obstacle_front_x = obstacle['x'] - obstacle['half_length']
             transition_start_x = obstacle['x'] - self.racing_lane_change_buffer
             transition_end_x = (
-                obstacle_front_x
-                - half_vehicle_length
-                - self.racing_obstacle_longitudinal_margin
+                obstacle_front_x - half_vehicle_length - self.racing_obstacle_longitudinal_margin
             )
 
             if transition_end_x <= transition_start_x + 0.25:
@@ -979,12 +889,14 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
                 if current_lane == self.racing_lane_left
                 else self.racing_lane_left
             )
-            self.racing_lane_plan.append({
-                'start_x': transition_start_x,
-                'end_x': transition_end_x,
-                'from_lane': current_lane,
-                'to_lane': target_lane,
-            })
+            self.racing_lane_plan.append(
+                {
+                    'start_x': transition_start_x,
+                    'end_x': transition_end_x,
+                    'from_lane': current_lane,
+                    'to_lane': target_lane,
+                }
+            )
             current_lane = target_lane
 
     def _build_racing_path_samples(self):
@@ -1004,11 +916,13 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
             lane, lane_slope = self._racing_path_at(s_value)
             heading = math.atan2(lane_slope, 1.0)
             self.racing_s.append(s_value)
-            self.racing_path.append({
-                'x': s_value,
-                'y': lane,
-                'heading': heading,
-            })
+            self.racing_path.append(
+                {
+                    'x': s_value,
+                    'y': lane,
+                    'heading': heading,
+                }
+            )
             s_value += resolution
 
         self.racing_path_length = self.racing_track_length
@@ -1030,11 +944,13 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
         while s_value <= self.city_path_length + 1e-6:
             x_pos, y_pos, heading, _, _, _ = self._city_path_pose(s_value)
             self.city_s_samples.append(s_value)
-            self.city_path_samples.append({
-                'x': x_pos,
-                'y': y_pos,
-                'heading': heading,
-            })
+            self.city_path_samples.append(
+                {
+                    'x': x_pos,
+                    'y': y_pos,
+                    'heading': heading,
+                }
+            )
             s_value += resolution
 
     def _racing_nearest_index(self):
@@ -1104,9 +1020,10 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
             if self.centerline_overwrite or not os.path.exists(path):
                 with open(path, 'w', encoding='ascii') as handle:
                     handle.write('s,x,y,heading\n')
-                    for s_value, point in zip(self.racing_s, self.racing_path):
+                    for s_value, point in zip(self.racing_s, self.racing_path, strict=True):
                         handle.write(
-                            f"{s_value:.3f},{point['x']:.4f},{point['y']:.4f},{point['heading']:.6f}\n"
+                            f'{s_value:.3f},{point["x"]:.4f},'
+                            f'{point["y"]:.4f},{point["heading"]:.6f}\n'
                         )
 
         if self.city_path_samples:
@@ -1114,9 +1031,12 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
             if self.centerline_overwrite or not os.path.exists(path):
                 with open(path, 'w', encoding='ascii') as handle:
                     handle.write('s,x,y,heading\n')
-                    for s_value, point in zip(self.city_s_samples, self.city_path_samples):
+                    for s_value, point in zip(
+                        self.city_s_samples, self.city_path_samples, strict=True
+                    ):
                         handle.write(
-                            f"{s_value:.3f},{point['x']:.4f},{point['y']:.4f},{point['heading']:.6f}\n"
+                            f'{s_value:.3f},{point["x"]:.4f},'
+                            f'{point["y"]:.4f},{point["heading"]:.6f}\n'
                         )
 
     def _city_path_pose(self, s_position):
@@ -1179,26 +1099,16 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
                 rel_y = y_pos - segment['center_y']
                 angle = math.atan2(rel_y, rel_x)
                 if segment['direction'] > 0.0:
-                    progress = self._wrap_angle_positive(
-                        angle - segment['start_angle']
-                    )
+                    progress = self._wrap_angle_positive(angle - segment['start_angle'])
                 else:
-                    progress = self._wrap_angle_positive(
-                        segment['start_angle'] - angle
-                    )
+                    progress = self._wrap_angle_positive(segment['start_angle'] - angle)
                 progress = clamp(progress, 0.0, segment['span'])
                 angle_clamped = segment['start_angle'] + segment['direction'] * progress
-                closest_x = segment['center_x'] + segment['radius'] * math.cos(
-                    angle_clamped
-                )
-                closest_y = segment['center_y'] + segment['radius'] * math.sin(
-                    angle_clamped
-                )
+                closest_x = segment['center_x'] + segment['radius'] * math.cos(angle_clamped)
+                closest_y = segment['center_y'] + segment['radius'] * math.sin(angle_clamped)
                 segment_s = progress * segment['radius']
 
-            distance_sq = (
-                (x_pos - closest_x) ** 2 + (y_pos - closest_y) ** 2
-            )
+            distance_sq = (x_pos - closest_x) ** 2 + (y_pos - closest_y) ** 2
             if best_distance_sq is None or distance_sq < best_distance_sq:
                 best_distance_sq = distance_sq
                 best_s = segment['s_start'] + segment_s
@@ -1207,11 +1117,7 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
 
     def _city_speed_for_segment(self, segment_index, segment_s, segment_length):
         segment = self.city_path[segment_index]
-        base_speed = (
-            self.city_turn_speed
-            if segment['type'] == 'arc'
-            else self.city_straight_speed
-        )
+        base_speed = self.city_turn_speed if segment['type'] == 'arc' else self.city_straight_speed
         blend_distance = max(self.city_speed_blend_distance, 1e-3)
 
         if segment_s < blend_distance:
@@ -1234,9 +1140,7 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
                     if next_segment['type'] == 'arc'
                     else self.city_straight_speed
                 )
-                progress = smoothstep(
-                    1.0 - (distance_to_end / blend_distance)
-                )
+                progress = smoothstep(1.0 - (distance_to_end / blend_distance))
                 base_speed = lerp(base_speed, next_speed, progress)
 
         return base_speed
@@ -1285,9 +1189,8 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
             return (0.0, 0.0, self.empty_track_heading)
 
         self.empty_track_has_valid_pose = True
-        front_bumper_x = (
-            self.current_x
-            + 0.5 * self.empty_track_vehicle_length * math.cos(self.current_yaw)
+        front_bumper_x = self.current_x + 0.5 * self.empty_track_vehicle_length * math.cos(
+            self.current_yaw
         )
         finish_x = self.empty_track_length
         if front_bumper_x >= finish_x - self.empty_track_stop_position_tolerance:
@@ -1321,8 +1224,7 @@ class AutonomousSystemsMS4PlanningTeam23(Node):
 
             if second_transition > 1e-6:
                 progress = clamp(
-                    (self.current_x - self.empty_track_lane_second_start)
-                    / second_transition,
+                    (self.current_x - self.empty_track_lane_second_start) / second_transition,
                     0.0,
                     1.0,
                 )
