@@ -41,13 +41,13 @@ This repository cannot benchmark physical hardware without the physical chassis,
 |---|---|---|
 | Physical vehicle run | Onboard Raspberry Pi 4 + microcontroller headless tracks (`paper/figures/final_autonomy_panel.png`) | Qualitative hardware demonstration in course artifacts; no synchronized hardware ground-truth CSV exists |
 | Gazebo simulation & localization (MS5) | Recorded simulation runs injecting Gaussian noise into `/ms5/ideal_odom` | Exported RMSE reductions documented in `paper/main.tex`; launchable with `Autonomous_Systems_MS_5_Team_23.launch.py` |
-| Planner, controller & Kalman math | Deterministic `pytest` suite (`test_autonomy_math.py`) inside ROS 2 Jazzy Docker | Reproducible on every push and PR via CI (`10 tests` covering world SDF parsing, clearance, PID, Stanley, and Kalman RMSE) |
+| Planner, controller & Kalman math | Deterministic `pytest` suite (`test_autonomy_math.py`) inside ROS 2 Jazzy Docker | Reproducible on every push and PR via CI (`10 tests`: 3 ament linters and 7 checks of SDF parsing, clearance, PID, Stanley, angle, and Kalman behavior) |
 | Microcontroller sketches | `arduino-cli` builds for Arduino Uno (`arduino:avr:uno`) and Pico (`arduino:mbed_rp2040:pico`) | Reproducible in CI and locally with `arduino-cli` |
 | Python linting & formatting | `ruff check .` and `ruff format --check .` plus `ament_{copyright,flake8,pep257}` | Reproducible locally and in CI (`pyproject.toml`, line length 99, single quotes) |
 
 ## Quantitative Summary (Exported MS5 Artifacts)
 
-The localization metrics below come from the exported Milestone 5 simulation runs reported in [`paper/main.tex`](paper/main.tex) and reproduced algorithmically in [`test_autonomy_math.py`](src/Autonomous_Systems_Project_Team_23/test/test_autonomy_math.py).
+The straight-track metrics and the racing-track position, heading, and gain percentages below come from [`paper/main.tex`](paper/main.tex); the racing-track duration (`10.64 s`) and speed RMSE (`0.0502 -> 0.0265 m/s`) come from the exported MS5 CSV artifacts (not archived in this repository; TODO: archive raw MS5 CSV exports if recovered) and match the `47.2%` speed gain reported in `paper/main.tex`. All runs are checked for the same effect (position and heading gain above 80 percent on a straight run) by [`test_autonomy_math.py`](src/Autonomous_Systems_Project_Team_23/test/test_autonomy_math.py).
 
 | Scenario | Duration | Position RMSE (Noisy -> Filtered) | Heading RMSE (Noisy -> Filtered) | Speed RMSE (Noisy -> Filtered) | Reduction (Pos / Heading / Speed) |
 |---|---:|---:|---:|---:|---|

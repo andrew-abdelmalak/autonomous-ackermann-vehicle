@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Deterministic `pytest` unit and paper-number reproduction suite covering angle wrapping, quintic blend, Ackermann kinematics, SDF obstacle parsing and racing clearance planning, city loop projection, PID speed and Stanley lateral control laws, and 5-state Kalman filter RMSE metrics.
+- Deterministic `pytest` unit and localization verification suite covering angle wrapping, quintic blend, Ackermann kinematics, SDF obstacle parsing and racing clearance planning, city loop projection, PID speed and Stanley lateral control laws, and 5-state Kalman filter gain checks.
 - SHA-pinned GitHub Actions CI running Ruff lint/formatting, ROS 2 Jazzy `colcon build` and `colcon test`, and `arduino-cli` builds for Arduino Uno and Raspberry Pi Pico sketches.
 - Community health files, issue forms, pull request template, release categorization config, Dependabot configuration, and citation metadata.
 
