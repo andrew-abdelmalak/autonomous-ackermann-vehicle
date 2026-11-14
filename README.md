@@ -7,7 +7,7 @@
 [![Python: 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![Paper PDF](https://img.shields.io/badge/Paper-IEEE%20PDF-b31b1b.svg)](docs/autonomous_ackermann_vehicle_paper.pdf)
 
-Integrated ROS 2 Jazzy and Gazebo Harmonic autonomy stack for a 1/10-scale Ackermann vehicle, combining quintic obstacle-avoidance and city path planning, feedforward PID speed control, Stanley lateral steering, 5-state Kalman localization, and embedded ATmega328P and RP2040 microcontroller firmware.
+Integrated ROS 2 Jazzy and Gazebo Harmonic autonomy stack for a scaled Ackermann vehicle, combining quintic obstacle-avoidance and city path planning, feedforward PID speed control, Stanley lateral steering, 5-state Kalman localization, and embedded ATmega328P and RP2040 microcontroller firmware.
 
 **Course:** MCTR 1002 Autonomous Systems, German University in Cairo (Spring 2026, Team 23)  
 **Paper:** [Compiled IEEE Paper (PDF)](docs/autonomous_ackermann_vehicle_paper.pdf) | [LaTeX Source](paper/main.tex)
@@ -47,7 +47,7 @@ This repository cannot benchmark physical hardware without the physical chassis,
 
 ## Quantitative Summary (Exported MS5 Artifacts)
 
-The straight-track metrics and the racing-track position, heading, and gain percentages below come from [`paper/main.tex`](paper/main.tex); the racing-track duration (`10.64 s`) and speed RMSE (`0.0502 -> 0.0265 m/s`) come from the exported MS5 CSV artifacts (not archived in this repository; TODO: archive raw MS5 CSV exports if recovered) and match the `47.2%` speed gain reported in `paper/main.tex`. All runs are checked for the same effect (position and heading gain above 80 percent on a straight run) by [`test_autonomy_math.py`](src/Autonomous_Systems_Project_Team_23/test/test_autonomy_math.py).
+The straight-track metrics and the racing-track position, heading, and gain percentages below come from [`paper/main.tex`](paper/main.tex); the racing-track duration (`10.64 s`) and speed RMSE (`0.0502 -> 0.0265 m/s`) come from the exported MS5 CSV artifacts (not archived in this repository; TODO: archive raw MS5 CSV exports if recovered) and match the `47.2%` speed gain reported in `paper/main.tex`. A synthetic straight-line run and a curved run are checked for the same effect (position and heading gain above 80 and 65 percent) by [`test_autonomy_math.py`](src/Autonomous_Systems_Project_Team_23/test/test_autonomy_math.py).
 
 | Scenario | Duration | Position RMSE (Noisy -> Filtered) | Heading RMSE (Noisy -> Filtered) | Speed RMSE (Noisy -> Filtered) | Reduction (Pos / Heading / Speed) |
 |---|---:|---:|---:|---:|---|

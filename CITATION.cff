@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software or paper, please cite the project as below."
 title: "Autonomous Ackermann Vehicle: ROS 2 Jazzy Planning, Control, and Kalman Localization Stack"
-abstract: "Integrated ROS 2 Jazzy and Gazebo Harmonic autonomy stack for a 1/10-scale Ackermann vehicle, combining quintic lane-change and oval city path planning, feedforward PID speed control, Stanley lateral steering, 5-state linearized Kalman localization, and embedded ATmega328P and RP2040 microcontroller firmware."
+abstract: "Integrated ROS 2 Jazzy and Gazebo Harmonic autonomy stack for a scaled Ackermann vehicle, combining quintic lane-change and oval city path planning, feedforward PID speed control, Stanley lateral steering, 5-state linearized Kalman localization, and embedded ATmega328P and RP2040 microcontroller firmware."
 authors:
   - family-names: "Abdelmalak"
     given-names: "Andrew"
