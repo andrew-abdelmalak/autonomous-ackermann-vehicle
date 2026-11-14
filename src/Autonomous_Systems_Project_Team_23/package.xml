@@ -3,7 +3,7 @@
 <package format="3">
   <name>Autonomous_Systems_Project_Team_23</name>
   <version>1.0.0</version>
-  <description>Planning, control, and Kalman filter localization nodes for a 1:10 scale Ackermann vehicle in ROS 2 Jazzy and Gazebo Harmonic.</description>
+  <description>Planning, control, and Kalman filter localization nodes for a scaled Ackermann vehicle in ROS 2 Jazzy and Gazebo Harmonic.</description>
   <maintainer email="127993352+andrew-abdelmalak@users.noreply.github.com">Andrew Abdelmalak</maintainer>
   <license>MIT</license>
 
