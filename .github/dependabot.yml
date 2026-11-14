@@ -21,3 +21,7 @@ updates:
     cooldown:
       default-days: 14
       semver-major-days: 14
+    ignore:
+      # ROS 2 Jazzy on Ubuntu 24.04 ships numpy 1.26; numpy 2 breaks binaries built against it.
+      - dependency-name: numpy
+        update-types: ["version-update:semver-major"]
