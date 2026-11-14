@@ -1,4 +1,4 @@
 # ROS 2 Jazzy (Ubuntu 24.04) provides rclpy and geometry/nav/sensor messages.
 # Exact pinned Python packages used by the package nodes and MS5 artifact exporter:
 numpy==1.26.4
-matplotlib==3.8.4
+matplotlib==3.11.2
