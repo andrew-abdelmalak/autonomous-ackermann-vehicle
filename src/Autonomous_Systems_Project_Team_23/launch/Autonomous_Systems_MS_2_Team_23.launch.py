@@ -1,16 +1,8 @@
 # Copyright 2026 Team 23
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 """MS2 launch file for Team 23 – Gazebo vehicle with OLR or Teleop mode."""
 
@@ -33,9 +25,7 @@ def generate_launch_description():
     """Generate the launch description for the MS2 simulation."""
     package_name = 'Autonomous_Systems_Project_Team_23'
     pkg_share = get_package_share_directory(package_name)
-    vehicle_sdf = os.path.join(
-        pkg_share, 'models', 'prius_team23', 'model.sdf'
-    )
+    vehicle_sdf = os.path.join(pkg_share, 'models', 'prius_team23', 'model.sdf')
 
     control_mode = LaunchConfiguration('control_mode')
     initial_speed = LaunchConfiguration('initial_speed')
@@ -63,14 +53,22 @@ def generate_launch_description():
     gazebo = ExecuteProcess(
         cmd=[
             'env',
-            '-u', 'GTK_PATH',
-            '-u', 'GTK_EXE_PREFIX',
-            '-u', 'GIO_MODULE_DIR',
-            '-u', 'GSETTINGS_SCHEMA_DIR',
-            '-u', 'GTK_IM_MODULE_FILE',
-            '-u', 'LOCPATH',
-            '-u', 'XDG_DATA_HOME',
-            '-u', 'XDG_DATA_DIRS',
+            '-u',
+            'GTK_PATH',
+            '-u',
+            'GTK_EXE_PREFIX',
+            '-u',
+            'GIO_MODULE_DIR',
+            '-u',
+            'GSETTINGS_SCHEMA_DIR',
+            '-u',
+            'GTK_IM_MODULE_FILE',
+            '-u',
+            'LOCPATH',
+            '-u',
+            'XDG_DATA_HOME',
+            '-u',
+            'XDG_DATA_DIRS',
             FindExecutable(name='gz'),
             'sim',
             '-r',
@@ -86,12 +84,9 @@ def generate_launch_description():
         executable='parameter_bridge',
         arguments=[
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
-            '/world/empty/model/vehicle/joint_state'
-            '@sensor_msgs/msg/JointState[gz.msgs.Model',
-            '/model/vehicle/cmd_vel'
-            '@geometry_msgs/msg/Twist]gz.msgs.Twist',
-            '/model/vehicle/odometry'
-            '@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+            '/world/empty/model/vehicle/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
+            '/model/vehicle/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
+            '/model/vehicle/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
         ],
         remappings=[
             ('/world/empty/model/vehicle/joint_state', 'joint_states'),
@@ -105,12 +100,18 @@ def generate_launch_description():
         executable='create',
         output='screen',
         arguments=[
-            '-world', 'empty',
-            '-file', vehicle_sdf,
-            '-name', 'vehicle',
-            '-x', '0.0',
-            '-y', lane,
-            '-z', '0.325',
+            '-world',
+            'empty',
+            '-file',
+            vehicle_sdf,
+            '-name',
+            'vehicle',
+            '-x',
+            '0.0',
+            '-y',
+            lane,
+            '-z',
+            '0.325',
         ],
     )
 
@@ -120,14 +121,14 @@ def generate_launch_description():
         executable='ms2_olr_team_23',
         name='autonomous_systems_ms_2_olr_team_23',
         output='screen',
-        parameters=[{
-            **shared_params,
-            'desired_speed': desired_speed,
-            'desired_steering': desired_steering,
-        }],
-        condition=IfCondition(
-            PythonExpression(["'", control_mode, "' == 'olr'"])
-        ),
+        parameters=[
+            {
+                **shared_params,
+                'desired_speed': desired_speed,
+                'desired_steering': desired_steering,
+            }
+        ],
+        condition=IfCondition(PythonExpression(["'", control_mode, "' == 'olr'"])),
     )
 
     # --- Teleop (Keyboard) node ---
@@ -138,16 +139,16 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
         prefix=teleop_terminal_prefix,
-        parameters=[{
-            **shared_params,
-            'initial_speed': initial_speed,
-            'lane': lane,
-            'desired_speed': desired_speed,
-            'desired_lane': desired_lane,
-        }],
-        condition=IfCondition(
-            PythonExpression(["'", control_mode, "' == 'teleop'"])
-        ),
+        parameters=[
+            {
+                **shared_params,
+                'initial_speed': initial_speed,
+                'lane': lane,
+                'desired_speed': desired_speed,
+                'desired_lane': desired_lane,
+            }
+        ],
+        condition=IfCondition(PythonExpression(["'", control_mode, "' == 'teleop'"])),
     )
 
     # --- rqt_graph ---
@@ -163,52 +164,52 @@ def generate_launch_description():
         actions=[spawn_vehicle, bridge, olr_node, teleop_node, rqt_graph],
     )
 
-    return LaunchDescription([
-        DeclareLaunchArgument(
-            'control_mode',
-            default_value='teleop',
-            description=(
-                'Control mode: teleop (keyboard) or olr (open-loop response).'
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument(
+                'control_mode',
+                default_value='teleop',
+                description=('Control mode: teleop (keyboard) or olr (open-loop response).'),
             ),
-        ),
-        DeclareLaunchArgument(
-            'initial_speed',
-            default_value='0.0',
-            description='Initial forward speed in m/s.',
-        ),
-        DeclareLaunchArgument(
-            'lane',
-            default_value='0.0',
-            description='Lane value (also used as vehicle spawn Y offset).',
-        ),
-        DeclareLaunchArgument(
-            'desired_speed',
-            default_value='0.25',
-            description='Desired forward speed in m/s (used by OLR).',
-        ),
-        DeclareLaunchArgument(
-            'desired_lane',
-            default_value='0.0',
-            description='Desired lane value.',
-        ),
-        DeclareLaunchArgument(
-            'desired_steering',
-            default_value='0.0',
-            description='Desired steering angular.z in rad/s (used by OLR).',
-        ),
-        DeclareLaunchArgument(
-            'use_rqt_graph',
-            default_value='true',
-            description='Launch rqt_graph alongside the simulation.',
-        ),
-        DeclareLaunchArgument(
-            'teleop_terminal_prefix',
-            default_value='gnome-terminal --',
-            description=(
-                'Terminal prefix for teleop (opens its own window). '
-                'Use "xterm -e" as an alternative.'
+            DeclareLaunchArgument(
+                'initial_speed',
+                default_value='0.0',
+                description='Initial forward speed in m/s.',
             ),
-        ),
-        gazebo,
-        delayed_start,
-    ])
+            DeclareLaunchArgument(
+                'lane',
+                default_value='0.0',
+                description='Lane value (also used as vehicle spawn Y offset).',
+            ),
+            DeclareLaunchArgument(
+                'desired_speed',
+                default_value='0.25',
+                description='Desired forward speed in m/s (used by OLR).',
+            ),
+            DeclareLaunchArgument(
+                'desired_lane',
+                default_value='0.0',
+                description='Desired lane value.',
+            ),
+            DeclareLaunchArgument(
+                'desired_steering',
+                default_value='0.0',
+                description='Desired steering angular.z in rad/s (used by OLR).',
+            ),
+            DeclareLaunchArgument(
+                'use_rqt_graph',
+                default_value='true',
+                description='Launch rqt_graph alongside the simulation.',
+            ),
+            DeclareLaunchArgument(
+                'teleop_terminal_prefix',
+                default_value='gnome-terminal --',
+                description=(
+                    'Terminal prefix for teleop (opens its own window). '
+                    'Use "xterm -e" as an alternative.'
+                ),
+            ),
+            gazebo,
+            delayed_start,
+        ]
+    )

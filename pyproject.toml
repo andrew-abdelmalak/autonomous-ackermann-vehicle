@@ -1,0 +1,22 @@
+# Host-side tooling only. The ROS 2 package itself is built by colcon from
+# src/Autonomous_Systems_Project_Team_23/setup.py, and colcon test runs the
+# ament linters (ament_copyright, ament_flake8, ament_pep257) plus the unit tests.
+
+[tool.ruff]
+line-length = 99
+target-version = "py312"
+
+[tool.ruff.format]
+# ament_flake8 enforces single quotes (flake8-quotes).
+quote-style = "single"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "B", "Q", "N8", "UP", "C4"]
+ignore = [
+    "N802", # ROS node classes and entry points keep their published names.
+    "N999", # Module names match the ROS 2 package layout used in launch files.
+    "UP031", # %-formatting kept in log calls to match rclpy logger style.
+]
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"

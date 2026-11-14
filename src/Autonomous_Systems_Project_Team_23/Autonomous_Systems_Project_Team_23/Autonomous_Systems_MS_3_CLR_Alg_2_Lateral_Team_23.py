@@ -1,16 +1,8 @@
 # Copyright 2026 Team 23
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 """Stanley-style lateral controller node for Team 23."""
 
@@ -30,12 +22,8 @@ def clamp(value, min_value, max_value):
 
 def quaternion_to_yaw(quaternion):
     """Convert a quaternion to a yaw angle in radians."""
-    siny_cosp = 2.0 * (
-        quaternion.w * quaternion.z + quaternion.x * quaternion.y
-    )
-    cosy_cosp = 1.0 - 2.0 * (
-        quaternion.y * quaternion.y + quaternion.z * quaternion.z
-    )
+    siny_cosp = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
+    cosy_cosp = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
     return math.atan2(siny_cosp, cosy_cosp)
 
 
@@ -49,10 +37,7 @@ def normalize_angle(angle_rad):
 
 def path_normal_coordinate(x_position, y_position, path_heading):
     """Project the vehicle position onto the path normal."""
-    return (
-        -math.sin(path_heading) * x_position
-        + math.cos(path_heading) * y_position
-    )
+    return -math.sin(path_heading) * x_position + math.cos(path_heading) * y_position
 
 
 def move_towards(current_value, target_value, max_delta):
@@ -100,38 +85,22 @@ class AutonomousSystemsMS3CLRAlg2LateralTeam23(Node):
 
         self.command_topic = self.get_parameter('command_topic').value
         self.state_topic = self.get_parameter('state_topic').value
-        self.speed_command_topic = self.get_parameter(
-            'speed_command_topic'
-        ).value
-        self.desired_lane_topic = self.get_parameter(
-            'desired_lane_topic'
-        ).value
-        self.desired_heading_topic = self.get_parameter(
-            'desired_heading_topic'
-        ).value
-        self.steering_command_topic = self.get_parameter(
-            'steering_command_topic'
-        ).value
+        self.speed_command_topic = self.get_parameter('speed_command_topic').value
+        self.desired_lane_topic = self.get_parameter('desired_lane_topic').value
+        self.desired_heading_topic = self.get_parameter('desired_heading_topic').value
+        self.steering_command_topic = self.get_parameter('steering_command_topic').value
         self.publish_rate_hz = float(self.get_parameter('publish_rate_hz').value)
         self.desired_lane = float(self.get_parameter('desired_lane').value)
-        self.desired_heading = float(
-            self.get_parameter('desired_heading').value
-        )
+        self.desired_heading = float(self.get_parameter('desired_heading').value)
         self.wheel_base = float(self.get_parameter('wheel_base').value)
         self.max_speed = float(self.get_parameter('max_speed').value)
         self.max_turn_rate = float(self.get_parameter('max_turn_rate').value)
-        self.max_steering_angle = float(
-            self.get_parameter('max_steering_angle').value
-        )
-        self.max_steering_rate = float(
-            self.get_parameter('max_steering_rate').value
-        )
+        self.max_steering_angle = float(self.get_parameter('max_steering_angle').value)
+        self.max_steering_rate = float(self.get_parameter('max_steering_rate').value)
         self.lateral_kp = float(self.get_parameter('lateral_kp').value)
         self.lateral_ki = float(self.get_parameter('lateral_ki').value)
         self.lateral_kd = float(self.get_parameter('lateral_kd').value)
-        self.lateral_integral_limit = float(
-            self.get_parameter('lateral_integral_limit').value
-        )
+        self.lateral_integral_limit = float(self.get_parameter('lateral_integral_limit').value)
         self.heading_kp = float(self.get_parameter('heading_kp').value)
         self.heading_kd = float(self.get_parameter('heading_kd').value)
 

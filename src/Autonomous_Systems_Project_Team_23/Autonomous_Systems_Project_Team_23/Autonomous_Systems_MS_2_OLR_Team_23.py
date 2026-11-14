@@ -1,16 +1,8 @@
 # Copyright 2026 Team 23
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 """Open-loop response (OLR) driving node for Team 23 (Milestone 2)."""
 
@@ -30,12 +22,8 @@ def clamp(value, min_value, max_value):
 
 def quaternion_to_yaw(quaternion):
     """Convert a quaternion to a yaw angle in radians."""
-    siny_cosp = 2.0 * (
-        quaternion.w * quaternion.z + quaternion.x * quaternion.y
-    )
-    cosy_cosp = 1.0 - 2.0 * (
-        quaternion.y * quaternion.y + quaternion.z * quaternion.z
-    )
+    siny_cosp = 2.0 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
+    cosy_cosp = 1.0 - 2.0 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
     return math.atan2(siny_cosp, cosy_cosp)
 
 
@@ -75,24 +63,16 @@ class AutonomousSystemsMS2OLRTeam23(Node):
         self.command_topic = self.get_parameter('command_topic').value
         self.state_topic = self.get_parameter('state_topic').value
         self.joint_state_topic = self.get_parameter('joint_state_topic').value
-        self.left_steering_joint_name = self.get_parameter(
-            'left_steering_joint_name'
-        ).value
-        self.right_steering_joint_name = self.get_parameter(
-            'right_steering_joint_name'
-        ).value
+        self.left_steering_joint_name = self.get_parameter('left_steering_joint_name').value
+        self.right_steering_joint_name = self.get_parameter('right_steering_joint_name').value
         self.publish_rate_hz = float(self.get_parameter('publish_rate_hz').value)
         self.wheel_base = float(self.get_parameter('wheel_base').value)
         self.desired_speed = float(self.get_parameter('desired_speed').value)
-        self.desired_steering = float(
-            self.get_parameter('desired_steering').value
-        )
+        self.desired_steering = float(self.get_parameter('desired_steering').value)
         self.max_speed = float(self.get_parameter('max_speed').value)
         self.max_turn_rate = float(self.get_parameter('max_turn_rate').value)
 
-        self.command_publisher = self.create_publisher(
-            Twist, self.command_topic, 10
-        )
+        self.command_publisher = self.create_publisher(Twist, self.command_topic, 10)
         self.odom_subscription = self.create_subscription(
             Odometry,
             self.state_topic,
@@ -127,9 +107,7 @@ class AutonomousSystemsMS2OLRTeam23(Node):
     def publish_command(self):
         """Publish the constant open-loop command."""
         command = Twist()
-        command.linear.x = clamp(
-            self.desired_speed, -self.max_speed, self.max_speed
-        )
+        command.linear.x = clamp(self.desired_speed, -self.max_speed, self.max_speed)
         command.angular.z = steering_to_yaw_rate(
             command.linear.x,
             self.desired_steering,
@@ -141,37 +119,27 @@ class AutonomousSystemsMS2OLRTeam23(Node):
 
     def joint_state_callback(self, msg):
         """Update the averaged steering angle from joint states."""
-        joint_positions = dict(zip(msg.name, msg.position))
+        joint_positions = dict(zip(msg.name, msg.position, strict=False))
         steering_values = []
 
         if self.left_steering_joint_name in joint_positions:
-            steering_values.append(
-                joint_positions[self.left_steering_joint_name]
-            )
+            steering_values.append(joint_positions[self.left_steering_joint_name])
         if self.right_steering_joint_name in joint_positions:
-            steering_values.append(
-                joint_positions[self.right_steering_joint_name]
-            )
+            steering_values.append(joint_positions[self.right_steering_joint_name])
 
         if steering_values:
-            self.current_steering_angle = (
-                sum(steering_values) / len(steering_values)
-            )
+            self.current_steering_angle = sum(steering_values) / len(steering_values)
 
     def odom_callback(self, msg):
         """Log vehicle state at a throttled rate."""
         now = self.get_clock().now()
-        elapsed_since_log = (
-            now - self.last_state_log_time
-        ).nanoseconds / 1_000_000_000.0
+        elapsed_since_log = (now - self.last_state_log_time).nanoseconds / 1_000_000_000.0
         if elapsed_since_log < 0.5:
             return
 
         position = msg.pose.pose.position
         velocity = msg.twist.twist.linear.x
-        yaw_deg = math.degrees(
-            quaternion_to_yaw(msg.pose.pose.orientation)
-        )
+        yaw_deg = math.degrees(quaternion_to_yaw(msg.pose.pose.orientation))
 
         self.get_logger().info(
             'state | steering=%.2f rad, velocity=%.2f m/s, '

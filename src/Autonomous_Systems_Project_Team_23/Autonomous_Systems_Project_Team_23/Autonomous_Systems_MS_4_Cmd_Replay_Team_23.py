@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Team 23
+#
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
+
 """Replay Twist commands from CSV."""
 
 import csv
 import time
 
+from geometry_msgs.msg import Twist
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
 
 
 class CmdReplayer(Node):
@@ -42,7 +48,8 @@ class CmdReplayer(Node):
         self.create_timer(period, self._tick)
 
     def _load_sequence(self, path):
-        """Load and normalise the CSV so the first entry always starts at t=0.
+        """
+        Load and normalise the CSV so the first entry always starts at t=0.
 
         The recorder saves ``time.monotonic()`` offsets that begin when the
         recorder node was constructed (often several seconds into the launch).
@@ -51,7 +58,7 @@ class CmdReplayer(Node):
         """
         sequence = []
         try:
-            with open(path, 'r', newline='') as f:
+            with open(path, newline='') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     try:
